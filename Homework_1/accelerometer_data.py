@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def PlotIMUData(imu_angle, incrament):
+def PlotIMUData(imu_angle, increment):
 
     # Generate x-axis data
     x = np.linspace(1, imu_angle.size, imu_angle.size)
@@ -13,11 +13,11 @@ def PlotIMUData(imu_angle, incrament):
     ax.plot(x, imu_angle, color='red', linewidth=.5, label='IMU_Data')
 
     # Moving Average Plotting
-    mavg = np.array(MovingAvg(imu_angle, incrament))
+    mavg = np.array(MovingAvg(imu_angle, increment))
     std_dev = np.std(mavg)
     mean_data = mavg.mean()
     x1 = np.linspace(1, imu_angle.size, mavg.size)
-    ax.plot(x1, mavg, color='blue', linewidth=.5, label=f'Moving Average [{incrament}]')
+    ax.plot(x1, mavg, color='blue', linewidth=.5, label=f'Moving Average [{increment}]')
     ax.text(1,1,
             f'Mean: {mean_data}, \nStandard Deviation: {std_dev}',
             style='italic')
@@ -31,14 +31,14 @@ def PlotIMUData(imu_angle, incrament):
     
     
 
-def MovingAvg(imu_angle, incrament = 10):
+def MovingAvg(imu_angle, increment = 10):
     
     avg_list = []
     ang_list = []
     for i in range(len(imu_angle)):
         ang_list.append(imu_angle[i])
-        if len(ang_list) >= incrament:
-            avg_list.append(sum(ang_list) / incrament)
+        if len(ang_list) >= increment:
+            avg_list.append(sum(ang_list) / increment)
             ang_list = []
 
     return avg_list
