@@ -52,8 +52,8 @@ if __name__ == '__main__':
     imu_angle = np.loadtxt('Homework_1/imudata.txt', usecols= 4)
 
     PlotIMUData(imu_angle, 2)
-    # PlotIMUData(imu_angle, 4)
-    # PlotIMUData(imu_angle, 8)
-    # PlotIMUData(imu_angle, 16)
-    # PlotIMUData(imu_angle, 64)
-    # PlotIMUData(imu_angle, 128)
+    PlotIMUData(imu_angle, 4)
+    PlotIMUData(imu_angle, 8)
+    PlotIMUData(imu_angle, 16)
+    PlotIMUData(imu_angle, 64)
+    PlotIMUData(imu_angle, 128)
