@@ -1,7 +1,4 @@
-from cProfile import label
-from turtle import color
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
 
 def PlotIMUData(imu_angle, incrament):
