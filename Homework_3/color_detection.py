@@ -1,9 +1,10 @@
 # Track colors and draw bounding boxes
 
 import cv2
+import imutils
 import numpy as np
 
-def ColorRange(color: str):
+def ColorRange(color= 'green'):
 
     if color == 'red':
         low_red = np.array([0, 34, 181])
@@ -22,8 +23,8 @@ def ColorRange(color: str):
 
 if __name__ == '__main__':
 
-    color = input('Enter color to track. ')
-        
+    # color = input('Enter color to track. ')
+
     # This will return video from the first webcam on your computer.
     cap = cv2.VideoCapture('Homework_3/stoplight.mp4')  
     
@@ -41,17 +42,31 @@ if __name__ == '__main__':
             break
         
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        low_thresh, high_thresh = ColorRange(color)
+        low_thresh, high_thresh = ColorRange()
         mask = cv2.inRange(hsv, low_thresh, high_thresh)
         color_mask = cv2.bitwise_and(frame, frame, mask=mask)
 
+        # Find the contours 
+        cnts = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        cnts = imutils.grab_contours(cnts)
+
         
-        # output the frame
-        out.write(frame) 
+        # Draw contours and track center
+        for c in cnts:
+
+            (x, y), radius = cv2.minEnclosingCircle(c)
+            center = (int(x), int(y))
+            radius = int(radius)
+
+            cv2.circle(frame, center, radius, color=(0, 255, 255), thickness=2)
+            cv2.circle(frame, center, 1, color=(0, 0, 255), thickness=4)
+        
+        # # output the frame
+        # out.write(frame) 
         
         # The original input frame is shown in the window 
         cv2.imshow('Original', frame)
-        cv2.imshow(f'{color} Mask', mask)  
+        cv2.imshow('Green Mask', mask)  
         compare_frame = np.hstack((frame, hsv, cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)))
         cv2.imshow('hstack: ', compare_frame)
         
