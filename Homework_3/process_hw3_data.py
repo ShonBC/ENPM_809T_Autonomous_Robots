@@ -21,13 +21,13 @@ if __name__ == '__main__':
 
     ax.legend(loc='best')
     ax.set(title='Object Tracking: Processing Time',
-    ylabel='Processing Time [msec]',
+    ylabel='Processing Time [sec]',
     xlabel='Frame')
 
     ax2.hist(time_deltas, density=True, bins=time_deltas.size)
 
     ax2.set(title='Object Tracking: Processing Time',
-    ylabel='Number of Frames]',
-    xlabel='Processing Time [msec]')
+    ylabel='Number of Frames',
+    xlabel='Processing Time [sec]')
 
     plt.show()
