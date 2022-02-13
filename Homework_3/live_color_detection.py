@@ -1,8 +1,9 @@
-# Track colors and draw bounding boxes
+# Track green and draw bounding circle. Can record result in .mp4 file.
 
 import cv2
 import imutils
 import numpy as np
+import time   
 
 def ColorRange(color= 'green'):
 
@@ -27,6 +28,7 @@ if __name__ == '__main__':
 
     # This will return video from the first webcam on your computer.
     cap = cv2.VideoCapture(0)  
+    f = open('hw3data.txt','a')
     
     # Define the codec and create VideoWriter object
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -34,6 +36,7 @@ if __name__ == '__main__':
     
     # loop runs if capturing has been initialized. 
     while(True):
+        start = time.time()
         # reads frames from a camera 
         # ret checks return at each frame
         ret, frame = cap.read() 
@@ -69,6 +72,11 @@ if __name__ == '__main__':
         compare_frame = np.hstack((frame, hsv, cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)))
         cv2.imshow('Frame Comparison (BGR, HSV, Color Mask)', compare_frame)
         
+        stop = time.time()
+        time_delta = stop - start
+        outstring = str(time_delta) + '\n'
+        print(outstring)
+        f.write(outstring)
         # Wait for 'a' key to stop the program 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
