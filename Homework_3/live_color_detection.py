@@ -43,10 +43,15 @@ if __name__ == '__main__':
 
         if not ret:
             break
-        
+
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         low_thresh, high_thresh = ColorRange()
         mask = cv2.inRange(hsv, low_thresh, high_thresh)
+
+        # Perform Closing (morphology) to filter noise
+        kernel = np.ones((7, 7), np.uint8)
+        mask = cv2.dilate(mask, kernel)
+        mask = cv2.erode(mask, kernel)
         color_mask = cv2.bitwise_and(frame, frame, mask=mask)
 
         # Find the contours 
