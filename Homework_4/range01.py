@@ -45,6 +45,7 @@ if __name__ == '__main__':
     # Take Image of scene
     name = 'lecture4inclass.jpg'
     RaspImg(name)
+
     # Define pin allocations
     trig = 16
     echo = 18
@@ -56,14 +57,17 @@ if __name__ == '__main__':
         print(f'Distance: {Distance(trig, echo)} cm')
         time.sleep(1)
 
-    avg_dis = sum(dis_list) / len(dis_list)
+    # Calculate average distance recorded
+    avg_dis = round(sum(dis_list) / len(dis_list), 2)
     print(f'Average Distance: {avg_dis}')
 
+    # Write the average distance on the image
     img = cv2.imread(name)
     font = cv2.FONT_HERSHEY_SIMPLEX
-    org = (20, 10)
+    org = (20, 40)
     font_scale = 1
     font_color = (0, 0, 255)
     thickness = 2
     cv2.putText(img, f'Average Distance: {avg_dis}',org, font, font_scale, font_color, thickness)
     cv2.imshow('image', img)
+    cv2.waitKey(0)
