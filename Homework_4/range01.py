@@ -71,3 +71,10 @@ if __name__ == '__main__':
     cv2.putText(img, f'Average Distance: {avg_dis}',org, font, font_scale, font_color, thickness)
     cv2.imshow('image', img)
     cv2.waitKey(0)
+
+    # Filename
+    filename = 'homework4.jpg'
+    
+    # Using cv2.imwrite() method
+    # Saving the image
+    cv2.imwrite(filename, img)
