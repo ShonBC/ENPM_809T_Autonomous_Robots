@@ -19,7 +19,7 @@ def Distance():
     # Generate trigger pulse
     gpio.output(trig, True)
     time.sleep(0.00001)
-    gpio.output(False)
+    gpio.output(trig, False)
 
     # Generate echo time signal
     while gpio.input(echo) == 0:
