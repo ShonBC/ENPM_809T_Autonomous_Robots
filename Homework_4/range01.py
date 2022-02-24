@@ -38,4 +38,9 @@ def Distance():
     gpio.cleanup()
     return distance
 
-print(f'Distance: {Distance()} cm')
+if __name__ == '__main__':
+
+    # Take 10 successive range measurements at a rate of 1Hz
+    for i in range(10):
+        print(f'Distance: {Distance()} cm')
+        time.sleep(1)
