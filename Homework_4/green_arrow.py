@@ -13,10 +13,8 @@ def ColorRange(color= 'green'):
 
     elif color == 'green':
         # Pi
-        low_green = np.array([80, 116, 78])
-        high_green = np.array([94, 185, 169])
-        # low_green = np.array([30, 70, 220])
-        # high_green = np.array([83, 255, 255])
+        low_green = np.array([73, 156, 91])
+        high_green = np.array([94, 244, 174])
 
         # Host
         # low_green = np.array([50, 100, 70])
@@ -128,6 +126,8 @@ def main():
         # The original input frame is shown in the window 
         cv2.imshow('Original', frame)
         
+        # output the frame
+        out.write(frame) 
         stop = time.time()
         time_delta = stop - start
         outstring = str(time_delta) + '\n'
