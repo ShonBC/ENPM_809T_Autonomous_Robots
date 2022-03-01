@@ -75,12 +75,12 @@ def RightPiv(tf):
 
     Init()
     # Left wheel
-    gpio.output(31, False)
-    gpio.output(33, True)
+    gpio.output(31, True)
+    gpio.output(33, False)
 
     # Right wheel
-    gpio.output(35, False)
-    gpio.output(37, True)
+    gpio.output(35, True)
+    gpio.output(37, False)
 
     # Wait
     time.sleep(tf)
@@ -98,12 +98,12 @@ def LeftPiv(tf):
 
     Init()
     # Left wheel
-    gpio.output(31, True)
-    gpio.output(33, False)
+    gpio.output(31, False)
+    gpio.output(33, True)
 
     # Right wheel
-    gpio.output(35, True)
-    gpio.output(37, False)
+    gpio.output(35, False)
+    gpio.output(37, True)
 
     # Wait
     time.sleep(tf)
