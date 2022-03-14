@@ -7,8 +7,10 @@ import numpy as np
 if __name__ == '__main__':
     
     # Load imu angular data in the 5th column of the data file
-    BRstates = np.loadtxt('Homework_6/docs/BRencoderstates.txt')
-    FLstates = np.loadtxt('Homework_6/docs/FLencoderstates.txt')
+    # BRstates = np.loadtxt('Homework_6/docs/BRencoderstates.txt')
+    # FLstates = np.loadtxt('Homework_6/docs/FLencoderstates.txt')
+    BRstates = np.loadtxt('Homework_6/docs/BRencoderstates_both.txt')
+    FLstates = np.loadtxt('Homework_6/docs/FLencoderstates_both.txt')
     x1 = np.arange(0, BRstates.size, step=1)
     x2 = np.arange(0, FLstates.size, step=1)
 
