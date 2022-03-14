@@ -1,3 +1,6 @@
+"""Run the right motors for one revolution and save BOTH encoder data to text files.
+"""
+
 import RPi.GPIO as gpio
 import numpy as np
 import time
