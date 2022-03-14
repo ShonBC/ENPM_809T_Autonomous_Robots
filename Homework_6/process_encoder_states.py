@@ -14,7 +14,7 @@ if __name__ == '__main__':
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-    ax.plot(x, states, 'o-', linewidth=.5, label='Raw Data')
+    ax.plot(x, states, 'o-', linewidth=.5)
 
     ax.legend(loc='best')
     ax.set(title='Motor Encoder Analysis',
