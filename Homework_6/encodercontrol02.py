@@ -1,3 +1,6 @@
+"""Spin wheel connected to pin 12 on RPI for 1 revolution. Save the 
+encoder states to a txt file for processing and analysis. 
+"""
 
 import RPi.GPIO as gpio
 import numpy as np
@@ -65,4 +68,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
