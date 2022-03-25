@@ -1,4 +1,7 @@
-from itertools import cycle
+"""Cycle the servo motor controlling the robotic gripper from open to closed and back 
+while recording a timelapse.
+"""
+
 import RPi.GPIO as gpio
 import time
 import cv2
