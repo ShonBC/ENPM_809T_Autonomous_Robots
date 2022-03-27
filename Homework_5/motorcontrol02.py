@@ -1,3 +1,6 @@
+"""Teleop script to drive Baron Bot using 'w', 's', 'a', or 'd' to choose an action for the robot.
+"""
+
 import RPi.GPIO as gpio
 import time
 
