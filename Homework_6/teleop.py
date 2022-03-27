@@ -38,10 +38,19 @@ def GameOver():
     """Set all pins to low
     """
 
+    # Motor pins
     gpio.output(31, False)
     gpio.output(33, False)
     gpio.output(35, False)
     gpio.output(37, False)
+
+    # Servo pins
+    gpio.outup(36, False)
+
+    # Distance sensor pins
+    gpio.output(16, False)
+
+    gpio.cleanup()
 
 def Distance():
     """Generate pulse signal to measure distance of objects in front of Baron Bot
@@ -242,3 +251,5 @@ if __name__ == '__main__':
             break
         
         KeyInput(key_press)
+    
+    GameOver()
