@@ -1,4 +1,5 @@
-
+'''Teleop Baron Bot for navigation and gripper control.
+'''
 
 import RPi.GPIO as gpio
 import time
@@ -204,7 +205,7 @@ def KeyInput(event):
     print(f'Key: {event}')
 
     key_press = event
-    tf = 1
+    tf = 0.5
 
     # Measure distance of objects before following a command
     Distance()
@@ -224,27 +225,10 @@ def KeyInput(event):
     else:
         print('Invlaid key pressed!!')
 
-def Timelapse(cap, duty_cycle = 0):
-
-    s, img = cap.read()
-    img = cv2.flip(img, 0)
-    if s:    # frame captured without any errors
-        cv2.imshow("cam-test", img)
-        # cv2.putText(img, f'Dutycycle: {duty_cycle}',  (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
-        cv2.destroyWindow("cam-test")
-        # output the frame
-        out.write(img)
 
 if __name__ == '__main__':
 
-    cap = cv2.VideoCapture(0)
-
-    # Define the codec and create VideoWriter object
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter('teleop.mp4', fourcc, 20.0, (640, 480))
-
     while True:
-        Timelapse(cap)
 
         key_press = input("Select Action: 'w' - Forward \n \
               's' - Backward \n \
