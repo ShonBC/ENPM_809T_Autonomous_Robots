@@ -45,7 +45,7 @@ def GameOver():
     gpio.output(37, False)
 
     # Servo pins
-    gpio.outup(36, False)
+    gpio.output(36, False)
 
     # Distance sensor pins
     gpio.output(16, False)
@@ -192,6 +192,7 @@ def OpenGripper():
 
     pwm.ChangeDutyCycle(11.5)
     time.sleep(1.5)
+    GameOver()
 
 def CloseGripper():
     """Fully close gripper
@@ -201,6 +202,7 @@ def CloseGripper():
 
     pwm.ChangeDutyCycle(6.75)
     time.sleep(1.5)
+    GameOver()
 
 def KeyInput(event):
     """Operate robot through user input to drive and open/close gripper
@@ -234,7 +236,6 @@ def KeyInput(event):
     else:
         print('Invlaid key pressed!!')
 
-
 if __name__ == '__main__':
 
     while True:
@@ -251,5 +252,3 @@ if __name__ == '__main__':
             break
         
         KeyInput(key_press)
-    
-    GameOver()
