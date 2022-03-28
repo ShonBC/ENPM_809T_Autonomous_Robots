@@ -3,7 +3,6 @@
 
 import RPi.GPIO as gpio
 import time
-import cv2
 
 def Init():
     """Assign RPI pins
