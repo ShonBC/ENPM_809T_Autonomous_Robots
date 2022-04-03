@@ -10,9 +10,10 @@ def Init():
 
     gpio.setmode(gpio.BOARD)
 
-    # Motor pins
+    # Left Motor pins
     gpio.setup(31, gpio.OUT) # IN1
     gpio.setup(33, gpio.OUT) # IN2
+
     gpio.setup(35, gpio.OUT) # IN3
     gpio.setup(37, gpio.OUT) # IN4
 
