@@ -1,6 +1,7 @@
 
 import RPi.GPIO as gpio
 import time
+import numpy as np
 
 class Robot:
     
@@ -41,9 +42,9 @@ class Robot:
         self.min_val = 0
         self.max_val = 100
 
-        self.kp = 10
-        self.ki = 0
-        self.kd = 0
+        self.kp = 0.1
+        self.ki = 0.01
+        self.kd = 0.5
 
     def InitGpio(self):
         """Assign RPI pins and initialize pwm signals
@@ -107,18 +108,55 @@ class Robot:
         self.gpwm.ChangeDutyCycle(self.open_servo_duty_cycle)
         time.sleep(1.5)
 
-    def Forward(self, tf):
-        """Move robot forward for 'tf' seconds
+    def Forward(self, distance):
+        """Move robot forward for 'distance' meters
 
         Args:
-            tf (int): Time in seconds for robot to drive forward
+            distance (int): Distance in meters for robot to drive forward
         """
+
+        drive_constant = 587.95 # (120 motor rev / 1 wheel rev) * (1 wheel rev / 2(0.0325 meter))
+
+        encoder_tics = drive_constant * 8 * distance
 
         # Left wheel
         self.lpwm.start(self.motor_dut_cycle)
         
         # Right wheel
         self.rpwm.start(self.motor_dut_cycle)
+
+        counterBR = np.uint64(0)
+        counterFL = np.uint64(0)
+
+        buttonBR = int(0)
+        buttonFL = int(0)
+
+        i = 0
+        while i <= encoder_tics:
+
+            stateBR = gpio.input(self.right_encoder_pin)
+            stateFL = gpio.input(self.left_encoder_pin)
+
+            print(f'counterBR = {counterBR}, counterFL = {counterFL}, GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
+            
+            if int(stateBR) != int(buttonBR):
+                buttonBR = int(stateBR)
+                counterBR += 1
+
+            if int(stateFL) != int(buttonFL):
+                buttonFL = int(stateFL)
+                counterFL += 1
+
+            if counterBR >= 20:
+                self.rpwm.stop()
+
+            if counterFL >= 20:
+                self.lpwm.stop()
+
+            '''INSERT PID CONTROL HERE'''
+
+            if counterBR >= 20 and counterFL >= 20:
+                break
 
         # Wait
         time.sleep(tf)
