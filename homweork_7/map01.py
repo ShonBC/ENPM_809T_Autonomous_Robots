@@ -34,6 +34,17 @@ class Robot:
 
         self.InitGpio()
 
+        # PID terms
+        self.dt = 0.1 # Time step
+        self.prev_err = 0
+        self.integral = 0
+        self.min_val = 0
+        self.max_val = 100
+
+        self.kp = 10
+        self.ki = 0
+        self.kd = 0
+
     def InitGpio(self):
         """Assign RPI pins and initialize pwm signals
         """
@@ -111,28 +122,43 @@ class Robot:
 
         # Wait
         time.sleep(tf)
-    
-    def Backward(self, tf):
-        """Move robot backward for 'tf' seconds
+
+    def PID(self, target, present):
+        """A function which computes the PID controller output value. target is used to store the setpoint
+        * present is used to store the current value
+        * Steps to calculate output :
+        * 1) err is the difference between the target and the present value
+        * 2) The proportional term is Kp times the error
+        * 3) The error is multiplied with the time step dt and added to the integral variable
+        * 4) The integral term is Ki times the integral variable
+        * 5) The derivate term is Kd times the difference in present error and previous error divided by the time step
+        * 6) Total output is the bounded (withing min and max) sum of the proportional, integral, and derivate term 
 
         Args:
-            tf (int): Time in seconds for robot to drive forward
+            target (float): Desired final velocity
+            present (float): Current velocity
+
+        Returns:
+            float: Final value calculated by PID controller
         """
-
-        # Left wheel
-        self.lpwm.start(50)
         
-        # Right wheel
-        self.rpwm.start(50)
+        err = target - present
 
-        # Wait
-        time.sleep(tf)
+        p_term = self.kp * err
 
-    def PID(self):
-        left_speed = 0 
-        right_speed = 0
+        self.integral = self.integral + (err * self.dt)
 
+        i_term = self.ki * self.integral
 
+        d_term = self.kd * (err - self.prev_err) / self.dt
+
+        output = p_term + i_term + d_term
+
+        self.prev_err = err
+
+        output = max(self.min_val, min(self.max_val, output))
+
+        return output
 
 if __name__ == '__main__':
 
