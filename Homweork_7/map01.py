@@ -46,6 +46,12 @@ class Robot:
         self.ki = 0.01
         self.kd = 0.5
 
+        # Robot properties
+        self.gear_ratio = 120 / 1 # 1:120
+        self.wheel_diameter = 0.065 # Meters
+        self.tics_per_rev = 8 # Number of encoder tics per 1 wheel revolution
+        self.drive_constant = self.gear_ratio * (1 / (2 * np.pi * (self.wheel_diameter / 2))) # Number of motor revolutions to drive 1 meter
+
     def InitGpio(self):
         """Assign RPI pins and initialize pwm signals
         """
@@ -114,17 +120,19 @@ class Robot:
         Args:
             distance (int): Distance in meters for robot to drive forward
         """
-
-        drive_constant = 587.95 # (120 motor rev / 1 wheel rev) * (1 wheel rev / 2(0.0325 meter))
-
-        encoder_tics = drive_constant * 8 * distance
+ 
+        encoder_tics = self.drive_constant * self.tics_per_rev * distance # Total encoder tics to drive the desired distance
 
         # Left wheel
+        gpio.output(self.lb_motor_pin, True)
+        gpio.output(self.lf_motor_pin, False)
         self.lpwm.start(self.motor_dut_cycle)
-        
+                
         # Right wheel
+        gpio.output(self.rb_motor_pin, False)
+        gpio.output(self.rf_motor_pin, True)
         self.rpwm.start(self.motor_dut_cycle)
-
+        
         counterBR = np.uint64(0)
         counterFL = np.uint64(0)
 
@@ -147,30 +155,53 @@ class Robot:
                 buttonFL = int(stateFL)
                 counterFL += 1
 
-            if counterBR >= 20:
+            if counterBR >= encoder_tics:
                 self.rpwm.stop()
 
-            if counterFL >= 20:
+            if counterFL >= encoder_tics:
                 self.lpwm.stop()
 
             '''INSERT PID CONTROL HERE'''
+            self.PID()
 
-            if counterBR >= 20 and counterFL >= 20:
+            if counterBR >= encoder_tics and counterFL >= encoder_tics:
                 break
 
+        # # Wait
+        # time.sleep(tf)
+
+    def Reverse(self, distance):
+        """Move robot in reverse for 'distance' meters
+
+        Args:
+            distance (int): Distance in meters for robot to drive in reverse
+        """
+ 
+        encoder_tics = self.drive_constant * self.tics_per_rev * distance # Total encoder tics to drive the desired distance
+
+        # Left wheel
+        gpio.output(self.lb_motor_pin, False)
+        gpio.output(self.lf_motor_pin, True)
+        self.lpwm.start(self.motor_dut_cycle)
+        
+        # Right wheel
+        gpio.output(self.rb_motor_pin, True)
+        gpio.output(self.rf_motor_pin, False)
+        self.rpwm.start(self.motor_dut_cycle)
+
         # Wait
-        time.sleep(tf)
+        time.sleep(distance)
 
     def PID(self, target, present):
-        """A function which computes the PID controller output value. target is used to store the setpoint
-        * present is used to store the current value
-        * Steps to calculate output :
-        * 1) err is the difference between the target and the present value
-        * 2) The proportional term is Kp times the error
-        * 3) The error is multiplied with the time step dt and added to the integral variable
-        * 4) The integral term is Ki times the integral variable
-        * 5) The derivate term is Kd times the difference in present error and previous error divided by the time step
-        * 6) Total output is the bounded (withing min and max) sum of the proportional, integral, and derivate term 
+        """A function which computes the PID controller output value. 'target' is used to store the setpoint
+        and 'present' is used to store the current value
+        Steps to calculate output :
+        1) err is the difference between the target and the present value
+        2) The proportional term is Kp times the error
+        3) The error is multiplied with the time step dt and added to the integral variable
+        4) The integral term is Ki times the integral variable
+        5) The derivate term is Kd times the difference in present error and previous error divided by the time step
+        6) Total output is the bounded (withing min and max) sum of the proportional, integral, and derivate term 
 
         Args:
             target (float): Desired final velocity
@@ -203,6 +234,6 @@ if __name__ == '__main__':
     robot = Robot()
     robot.OpenGripper()
     # robot.CloseGripper()
-    robot.Forward(8)
-    # robot.Backward(4)
+    # robot.Forward(8)
+    robot.Reverse(4)
     robot.GameOver()
