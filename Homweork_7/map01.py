@@ -40,7 +40,7 @@ class Robot:
         self.prev_err = 0
         self.integral = 0
         self.min_val = 0
-        self.max_val = 100
+        self.max_val = 2
 
         self.kp = 0.1
         self.ki = 0.01
@@ -49,8 +49,9 @@ class Robot:
         # Robot properties
         self.gear_ratio = 120 / 1 # 1:120
         self.wheel_diameter = 0.065 # Meters
-        self.tics_per_rev = 8 # Number of encoder tics per 1 wheel revolution
-        self.drive_constant = self.gear_ratio * (1 / (2 * np.pi * (self.wheel_diameter / 2))) # Number of motor revolutions to drive 1 meter
+        self.tics_per_rev = 20 # Number of encoder tics per 1 wheel revolution
+        self.drive_constant = self.tics_per_rev / (2 * np.pi * (self.wheel_diameter / 2))
+        # self.gear_ratio * (1 / (2 * np.pi * (self.wheel_diameter / 2))) # Number of motor revolutions to drive 1 meter
 
     def InitGpio(self):
         """Assign RPI pins and initialize pwm signals
@@ -121,8 +122,8 @@ class Robot:
             distance (int): Distance in meters for robot to drive forward
         """
  
-        encoder_tics = self.drive_constant * self.tics_per_rev * distance # Total encoder tics to drive the desired distance
-
+        encoder_tics = self.drive_constant * distance # Total encoder tics to drive the desired distance
+        print(encoder_tics)
         # Left wheel
         gpio.output(self.lb_motor_pin, True)
         gpio.output(self.lf_motor_pin, False)
@@ -145,7 +146,7 @@ class Robot:
             stateBR = gpio.input(self.right_encoder_pin)
             stateFL = gpio.input(self.left_encoder_pin)
 
-            print(f'counterBR = {counterBR}, counterFL = {counterFL}, GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
+            # print(f'counterBR = {counterBR}, counterFL = {counterFL}, GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
             
             if int(stateBR) != int(buttonBR):
                 buttonBR = int(stateBR)
@@ -161,9 +162,27 @@ class Robot:
             if counterFL >= encoder_tics:
                 self.lpwm.stop()
 
-            '''INSERT PID CONTROL HERE'''
-            self.PID()
+            # PID tunning
+            if counterBR > counterFL: 
+                
+                scale = self.PID(counterBR, counterFL)
+                # print(f'Left Scale: {self.motor_dut_cycle * scale}')
+                speed_update = min(self.motor_dut_cycle * scale, 100)
+                self.lpwm.ChangeDutyCycle(speed_update)
 
+            if counterFL > counterBR:
+
+                scale = self.PID(counterFL, counterBR)
+                # print(f'Right Scale: {self.motor_dut_cycle * scale}')
+                speed_update = min(self.motor_dut_cycle * scale, 100)
+                self.rpwm.ChangeDutyCycle(speed_update)
+
+            if counterFL == counterBR:
+
+                self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
+                self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
+
+            # Break when both encoder counts reached the desired total
             if counterBR >= encoder_tics and counterFL >= encoder_tics:
                 break
 
@@ -232,8 +251,8 @@ class Robot:
 if __name__ == '__main__':
 
     robot = Robot()
-    robot.OpenGripper()
+    # robot.OpenGripper()
     # robot.CloseGripper()
-    # robot.Forward(8)
-    robot.Reverse(4)
+    robot.Forward(2)
+    # robot.Reverse(4)
     robot.GameOver()
