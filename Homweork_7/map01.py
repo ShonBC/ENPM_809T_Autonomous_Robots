@@ -42,9 +42,9 @@ class Robot:
         self.min_val = 0
         self.max_val = 2
 
-        self.kp = 0.1
-        self.ki = 0.01
-        self.kd = 0.5
+        self.kp = 0.5
+        self.ki = 0.0
+        self.kd = 0.0
 
         # Robot properties
         self.gear_ratio = 120 / 1 # 1:120
@@ -151,11 +151,13 @@ class Robot:
             if int(stateBR) != int(buttonBR):
                 buttonBR = int(stateBR)
                 counterBR += 1
+                
 
             if int(stateFL) != int(buttonFL):
                 buttonFL = int(stateFL)
                 counterFL += 1
-
+                
+            
             if counterBR >= encoder_tics:
                 self.rpwm.stop()
 
@@ -168,19 +170,22 @@ class Robot:
                 scale = self.PID(counterBR, counterFL)
                 # print(f'Left Scale: {self.motor_dut_cycle * scale}')
                 speed_update = min(self.motor_dut_cycle * scale, 100)
-                self.lpwm.ChangeDutyCycle(speed_update)
+                self.rpwm.ChangeDutyCycle(speed_update)
+                print(f'Left: {counterFL} Speed: {speed_update} Right: {counterBR}')
 
             if counterFL > counterBR:
 
                 scale = self.PID(counterFL, counterBR)
                 # print(f'Right Scale: {self.motor_dut_cycle * scale}')
                 speed_update = min(self.motor_dut_cycle * scale, 100)
-                self.rpwm.ChangeDutyCycle(speed_update)
+                self.lpwm.ChangeDutyCycle(speed_update)
+                # print(f'Left: {counterFL} Right: {counterBR} Speed: {speed_update}')
 
-            if counterFL == counterBR:
+            
+            # if counterFL == counterBR:
 
-                self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
-                self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
+            #     self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
+            #     self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
 
             # Break when both encoder counts reached the desired total
             if counterBR >= encoder_tics and counterFL >= encoder_tics:
@@ -253,6 +258,6 @@ if __name__ == '__main__':
     robot = Robot()
     # robot.OpenGripper()
     # robot.CloseGripper()
-    robot.Forward(2)
+    robot.Forward(int(input()))
     # robot.Reverse(4)
     robot.GameOver()
