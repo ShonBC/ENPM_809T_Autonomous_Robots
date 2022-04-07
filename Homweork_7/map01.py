@@ -5,7 +5,11 @@ import numpy as np
 
 class Robot:
     
-    def __init__(self):
+    def __init__(self, monitor_encoders = False):
+
+        # Save Encoder data to text files
+        self.monitor_encoders = monitor_encoders
+
         # Motor pins
         self.motor_frequency = 50
         self.motor_dut_cycle = 45 # Controls speed
@@ -102,6 +106,16 @@ class Robot:
         # Distance sensor pins
         gpio.output(self.trig, False)
 
+    def MonitorEncoders(self, action, stateBR, stateFL):
+        # Save encoder states to txt file
+        br = open(f'{action}_BRencoderstates.txt','a')
+        fl = open(f'{action}_FLencoderstates.txt','a')
+        # Save encoder states to txt files
+        broutstring = str(stateBR) + '\n'
+        floutstring = str(stateFL) + '\n'
+        br.write(broutstring)
+        fl.write(floutstring)
+
     def Distance(self):
         """Generate pulse signal to measure distance of objects in front of Baron Bot
 
@@ -181,6 +195,10 @@ class Robot:
 
             # print(f'counterBR = {counterBR}, counterFL = {counterFL}, GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
             
+            # Save encoder states to txt files
+            if self.monitor_encoders == True:
+                self.MonitorEncoders('Forward', stateBR, stateFL)
+
             if int(stateBR) != int(buttonBR):
                 buttonBR = int(stateBR)
                 counterBR += 1          
@@ -252,6 +270,10 @@ class Robot:
 
             # print(f'counterBR = {counterBR}, counterFL = {counterFL}, GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
             
+            # Save encoder states to txt files
+            if self.monitor_encoders == True:
+                self.MonitorEncoders('Reverse', stateBR, stateFL)
+
             if int(stateBR) != int(buttonBR):
                 buttonBR = int(stateBR)
                 counterBR += 1          
@@ -324,6 +346,10 @@ class Robot:
 
             # print(f'counterBR = {counterBR}, counterFL = {counterFL}, GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
             
+            # Save encoder states to txt files
+            if self.monitor_encoders == True:
+                self.MonitorEncoders('LeftPiv', stateBR, stateFL)
+
             if int(stateBR) != int(buttonBR):
                 buttonBR = int(stateBR)
                 counterBR += 1          
@@ -380,6 +406,10 @@ class Robot:
 
             # print(f'counterBR = {counterBR}, counterFL = {counterFL}, GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
             
+            # Save encoder states to txt files
+            if self.monitor_encoders == True:
+                self.MonitorEncoders('RightPiv', stateBR, stateFL)
+
             if int(stateBR) != int(buttonBR):
                 buttonBR = int(stateBR)
                 counterBR += 1          
@@ -494,7 +524,7 @@ class Robot:
 
 if __name__ == '__main__':
 
-    robot = Robot()
+    robot = Robot(monitor_encoders=False)
     # robot.OpenGripper()
     # robot.CloseGripper()
     # robot.Forward(int(input()))
