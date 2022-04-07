@@ -525,12 +525,6 @@ class Robot:
 if __name__ == '__main__':
 
     robot = Robot(monitor_encoders=False)
-    # robot.OpenGripper()
-    # robot.CloseGripper()
-    # robot.Forward(int(input()))
-    # robot.Reverse(int(input()))
-    # robot.LeftPiv(int(input()))
-    # robot.RightPiv(int(input()))
     robot.Teleop()
     robot.GameOver()
     gpio.cleanup()
