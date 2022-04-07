@@ -102,8 +102,6 @@ class Robot:
         # Distance sensor pins
         gpio.output(self.trig, False)
 
-        gpio.cleanup()
-
     def Distance(self):
         """Generate pulse signal to measure distance of objects in front of Baron Bot
 
@@ -133,7 +131,7 @@ class Robot:
         distance = pulse_duration * 17150
         distance = round(distance, 2)
 
-        print(f'Distance: {distance}')
+        print(f'Distance Sensor Reading: {distance}')
         return distance
 
     def CloseGripper(self):
@@ -299,8 +297,8 @@ class Robot:
 
         fraction = angle / 360
         encoder_tics = self.drive_constant * self.turning_perimeter * fraction
-        print(self.drive_constant)
-        print(encoder_tics)
+        # print(self.drive_constant)
+        # print(encoder_tics)
 
         # Left wheel
         gpio.output(self.lb_motor_pin, False)
@@ -355,8 +353,8 @@ class Robot:
 
         fraction = angle / 360
         encoder_tics = self.drive_constant * self.turning_perimeter * fraction
-        print(self.drive_constant)
-        print(encoder_tics)
+        # print(self.drive_constant)
+        # print(encoder_tics)
 
         # Left wheel
         gpio.output(self.lb_motor_pin, True)
@@ -443,7 +441,8 @@ class Robot:
         """Operate robot through user input to drive and open/close gripper
 
         Args:
-            event (str): 'w', 's', 'a', 'd', 'o', 'c', 'p' to choose an action for the robot 
+            event (str): 'w', 's', 'a', 'd', 'o', 'c', 'p' to choose an action for the robot
+            value (float): Distance to travel/Angle to turn 
         """
 
         print(f'Key: {key}')
@@ -471,6 +470,8 @@ class Robot:
             print('Invlaid key pressed!!')
     
     def Teleop(self):
+        """Control loop to teleop the robot 
+        """
 
         while True:
 
@@ -489,17 +490,7 @@ class Robot:
             
             self.KeyInput(key_press, float(value))
 
-            # Motor pins
-            gpio.output(self.lb_motor_pin, False)
-            gpio.output(self.lf_motor_pin, False)
-            gpio.output(self.rb_motor_pin, False)
-            gpio.output(self.rf_motor_pin, False)
-
-            # Servo pins
-            gpio.output(self.servo_pin, False)
-            
-            # Distance sensor pins
-            gpio.output(self.trig, False)
+            self.GameOver()
 
 if __name__ == '__main__':
 
@@ -512,3 +503,4 @@ if __name__ == '__main__':
     # robot.RightPiv(int(input()))
     robot.Teleop()
     robot.GameOver()
+    gpio.cleanup()
