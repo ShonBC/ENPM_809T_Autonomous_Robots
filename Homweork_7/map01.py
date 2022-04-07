@@ -104,6 +104,38 @@ class Robot:
 
         gpio.cleanup()
 
+    def Distance(self):
+        """Generate pulse signal to measure distance of objects in front of Baron Bot
+
+        Returns:
+            float: Distance of objects detected by distance sensor in [cm]
+        """
+
+        # Ensure output has no value
+        gpio.output(self.trig, False)
+        time.sleep(0.01)
+
+        # Generate trigger pulse
+        gpio.output(self.trig, True)
+        time.sleep(0.00001)
+        gpio.output(self.trig, False)
+
+        # Generate echo time signal
+        while gpio.input(self.echo) == 0:
+            pulse_start = time.time()
+
+        while gpio.input(self.echo) == 1:
+            pulse_end = time.time()
+
+        pulse_duration = pulse_end - pulse_start
+
+        # Convert time to distance in [cm] using speed of sound
+        distance = pulse_duration * 17150
+        distance = round(distance, 2)
+
+        print(f'Distance: {distance}')
+        return distance
+
     def CloseGripper(self):
         """Fully close gripper
         """
@@ -310,6 +342,8 @@ class Robot:
 
             # Break when both encoder counts reached the desired total
             if counterFL >= encoder_tics:
+                self.rpwm.stop()
+                self.lpwm.stop()
                 break
 
     def RightPiv(self, angle):
@@ -364,6 +398,8 @@ class Robot:
 
             # Break when both encoder counts reached the desired total
             if counterBR >= encoder_tics:
+                self.rpwm.stop()
+                self.lpwm.stop()
                 break
 
     def PID(self, target, present):
@@ -403,6 +439,68 @@ class Robot:
 
         return output
 
+    def KeyInput(self, key, value):
+        """Operate robot through user input to drive and open/close gripper
+
+        Args:
+            event (str): 'w', 's', 'a', 'd', 'o', 'c', 'p' to choose an action for the robot 
+        """
+
+        print(f'Key: {key}')
+        print(f'Distance/Angle: {value}')
+
+        key_press = key
+        tf = 0.5
+
+        # Measure distance of objects before following a command
+        self.Distance()
+
+        if key_press.lower() == 'w':
+            self.Forward(value)
+        elif key_press == 's':
+            self.Reverse(value)
+        elif key_press == 'a':
+            self.LeftPiv(value)
+        elif key_press == 'd':
+            self.RightPiv(value)
+        elif key_press == 'o':
+            self.OpenGripper()
+        elif key_press == 'c':
+            self.CloseGripper()
+        else:
+            print('Invlaid key pressed!!')
+    
+    def Teleop(self):
+
+        while True:
+
+            key_press = input("Select Action: 'w' - Forward \n \
+                's' - Backward \n \
+                'a' - Pivot Left \n \
+                'd' - Pivot Right \n \
+                'o' - Open Gripper \n \
+                'c' - Close Gripper \n \
+                'p' - Exit Program \n")
+            
+            if key_press.lower() == 'p':
+                break
+
+            value = input("Distance to travel/Angle to turn: ")
+            
+            self.KeyInput(key_press, float(value))
+
+            # Motor pins
+            gpio.output(self.lb_motor_pin, False)
+            gpio.output(self.lf_motor_pin, False)
+            gpio.output(self.rb_motor_pin, False)
+            gpio.output(self.rf_motor_pin, False)
+
+            # Servo pins
+            gpio.output(self.servo_pin, False)
+            
+            # Distance sensor pins
+            gpio.output(self.trig, False)
+
 if __name__ == '__main__':
 
     robot = Robot()
@@ -411,5 +509,6 @@ if __name__ == '__main__':
     # robot.Forward(int(input()))
     # robot.Reverse(int(input()))
     # robot.LeftPiv(int(input()))
-    robot.RightPiv(int(input()))
+    # robot.RightPiv(int(input()))
+    robot.Teleop()
     robot.GameOver()
