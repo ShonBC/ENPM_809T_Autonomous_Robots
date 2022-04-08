@@ -3,16 +3,17 @@ import RPi.GPIO as gpio
 import time
 import numpy as np
 
+
 class Robot:
-    
-    def __init__(self, monitor_encoders = False):
+
+    def __init__(self, monitor_encoders=False):
 
         # Save Encoder data to text files
         self.monitor_encoders = monitor_encoders
 
         # Motor pins
         self.motor_frequency = 50
-        self.motor_dut_cycle = 45 # Controls speed
+        self.motor_dut_cycle = 45  # Controls speed
         self.lb_motor_pin = 31
         self.lf_motor_pin = 33
         self.rb_motor_pin = 35
@@ -21,7 +22,7 @@ class Robot:
         # Encoder pins
         self.left_encoder_pin = 7
         self.right_encoder_pin = 12
-        
+
         # Gripper pins
         self.servo_frequency = 50
         self.open_servo_duty_cycle = 11.5
@@ -40,7 +41,7 @@ class Robot:
         self.InitGpio()
 
         # PID terms
-        self.dt = 0.1 # Time step
+        self.dt = 0.1  # Time step
         self.prev_err = 0
         self.integral = 0
         self.min_val = 0
@@ -51,13 +52,14 @@ class Robot:
         self.kd = 0.0
 
         # Robot properties
-        self.gear_ratio = 120 / 1 # 1:120
-        self.wheel_diameter = 0.065 # Meters
+        self.gear_ratio = 120 / 1  # 1:120
+        self.wheel_diameter = 0.065  # Meters
         # self.wheel_base = 0.1524 # Meters (6")
-        self.wheel_base = 0.1397 # Meters (5.5")
+        self.wheel_base = 0.1397  # Meters (5.5")
         # self.wheel_base = 0.127 # Meters (5")
-        self.tics_per_rev = 20 # Number of encoder tics per 1 wheel revolution
-        self.drive_constant = self.tics_per_rev / (2 * np.pi * (self.wheel_diameter / 2))
+        self.tics_per_rev = 20  # Number of encoder tics per 1 wheel revolution
+        self.drive_constant = self.tics_per_rev \
+            / (2 * np.pi * (self.wheel_diameter / 2))
         self.turning_perimeter = 2 * np.pi * (self.wheel_base)
 
     def InitGpio(self):
@@ -67,18 +69,24 @@ class Robot:
         gpio.setmode(gpio.BOARD)
 
         # Left Motor pins
-        gpio.setup(self.lb_motor_pin, gpio.OUT) # IN1
-        gpio.setup(self.lf_motor_pin, gpio.OUT) # IN2
-        self.lpwm = gpio.PWM(self.lb_motor_pin, self.motor_frequency) # Control both left wheels
+        gpio.setup(self.lb_motor_pin, gpio.OUT)  # IN1
+        gpio.setup(self.lf_motor_pin, gpio.OUT)  # IN2
+
+        # Control both left wheels
+        self.lpwm = gpio.PWM(self.lb_motor_pin, self.motor_frequency)
 
         # Right Motor pins
-        gpio.setup(self.rb_motor_pin, gpio.OUT) # IN3
-        gpio.setup(self.rf_motor_pin, gpio.OUT) # IN4
-        self.rpwm = gpio.PWM(self.rf_motor_pin, self.motor_frequency) # Control both right wheels
+        gpio.setup(self.rb_motor_pin, gpio.OUT)  # IN3
+        gpio.setup(self.rf_motor_pin, gpio.OUT)  # IN4
+
+        # Control both right wheels
+        self.rpwm = gpio.PWM(self.rf_motor_pin, self.motor_frequency)
 
         # Encoder pins
-        gpio.setup(self.left_encoder_pin, gpio.IN, pull_up_down = gpio.PUD_UP) # (Left side) Setup encoder attached to pin 7
-        gpio.setup(self.right_encoder_pin, gpio.IN, pull_up_down = gpio.PUD_UP) # (Right side) Setup encoder attached to pin 12 
+        gpio.setup(self.left_encoder_pin, gpio.IN,
+                   pull_up_down=gpio.PUD_UP)  # (Left) Setup pin 7 encoder
+        gpio.setup(self.right_encoder_pin, gpio.IN,
+                   pull_up_down=gpio.PUD_UP)  # (Right) Setup pin 12 encoder
 
         # Servo pins
         gpio.setup(self.servo_pin, gpio.OUT)
@@ -102,14 +110,14 @@ class Robot:
 
         # Servo pins
         gpio.output(self.servo_pin, False)
-        
+
         # Distance sensor pins
         gpio.output(self.trig, False)
 
     def MonitorEncoders(self, action, stateBR, stateFL):
         # Save encoder states to txt file
-        br = open(f'{action}_BRencoderstates.txt','a')
-        fl = open(f'{action}_FLencoderstates.txt','a')
+        br = open(f'{action}_BRencoderstates.txt', 'a')
+        fl = open(f'{action}_FLencoderstates.txt', 'a')
         # Save encoder states to txt files
         broutstring = str(stateBR) + '\n'
         floutstring = str(stateFL) + '\n'
@@ -117,7 +125,8 @@ class Robot:
         fl.write(floutstring)
 
     def Distance(self):
-        """Generate pulse signal to measure distance of objects in front of Baron Bot
+        """Generate pulse signal to measure distance of objects in front of
+        Baron Bot
 
         Returns:
             float: Distance of objects detected by distance sensor in [cm]
@@ -154,7 +163,7 @@ class Robot:
 
         self.gpwm.ChangeDutyCycle(self.close_servo_duty_cycle)
         time.sleep(1.5)
-    
+
     def OpenGripper(self):
         """Fully open gripper
         """
@@ -168,19 +177,21 @@ class Robot:
         Args:
             distance (int): Distance in meters for robot to drive forward
         """
- 
-        encoder_tics = self.drive_constant * distance # Total encoder tics to drive the desired distance
+
+        # Total encoder tics to drive the desired distance
+        encoder_tics = self.drive_constant * distance
         # print(f'Encoder Tics: {encoder_tics}')
+
         # Left wheel
         gpio.output(self.lb_motor_pin, True)
         gpio.output(self.lf_motor_pin, False)
         self.lpwm.start(self.motor_dut_cycle)
-                
+
         # Right wheel
         gpio.output(self.rb_motor_pin, False)
         gpio.output(self.rf_motor_pin, True)
         self.rpwm.start(self.motor_dut_cycle)
-        
+
         counterBR = np.uint64(0)
         counterFL = np.uint64(0)
 
@@ -193,20 +204,21 @@ class Robot:
             stateBR = gpio.input(self.right_encoder_pin)
             stateFL = gpio.input(self.left_encoder_pin)
 
-            # print(f'counterBR = {counterBR}, counterFL = {counterFL}, GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
-            
+            # print(f'counterBR = {counterBR}, counterFL = {counterFL}, \
+            # GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
+
             # Save encoder states to txt files
-            if self.monitor_encoders == True:
+            if self.monitor_encoders is True:
                 self.MonitorEncoders('Forward', stateBR, stateFL)
 
             if int(stateBR) != int(buttonBR):
                 buttonBR = int(stateBR)
-                counterBR += 1          
+                counterBR += 1
 
             if int(stateFL) != int(buttonFL):
                 buttonFL = int(stateFL)
-                counterFL += 1  
-            
+                counterFL += 1
+
             if counterBR >= encoder_tics:
                 self.rpwm.stop()
 
@@ -214,17 +226,19 @@ class Robot:
                 self.lpwm.stop()
 
             # PID tunning
-            if counterBR > counterFL: # Double speed to match encoder counts
-                
+            if counterBR > counterFL:  # Double speed to match encoder counts
+
                 speed_update = min(self.motor_dut_cycle * 2, 100)
                 self.lpwm.ChangeDutyCycle(speed_update)
-                # print(f'Left: {counterFL} Speed: {speed_update} Right: {counterBR}')
+                # print(f'Left: {counterFL} Speed: {speed_update} \
+                # Right: {counterBR}')
 
-            if counterFL > counterBR: # Double speed to match encoder counts
+            if counterFL > counterBR:  # Double speed to match encoder counts
 
-                speed_update = min(self.motor_dut_cycle * 2, 100) 
+                speed_update = min(self.motor_dut_cycle * 2, 100)
                 self.rpwm.ChangeDutyCycle(speed_update)
-                # print(f'Left: {counterFL} Right: {counterBR} Speed: {speed_update}')
+                # print(f'Left: {counterFL} Right: {counterBR} \
+                # Speed: {speed_update}')
 
             if counterFL == counterBR:
 
@@ -241,14 +255,15 @@ class Robot:
         Args:
             distance (int): Distance in meters for robot to drive in reverse
         """
- 
-        encoder_tics = self.drive_constant * distance # Total encoder tics to drive the desired distance
+
+        # Total encoder tics to drive the desired distance
+        encoder_tics = self.drive_constant * distance
 
         # Left wheel
         gpio.output(self.lb_motor_pin, False)
         gpio.output(self.lf_motor_pin, True)
         self.lpwm.start(self.motor_dut_cycle)
-        
+
         # Right wheel
         gpio.output(self.rb_motor_pin, True)
         gpio.output(self.rf_motor_pin, False)
@@ -268,20 +283,21 @@ class Robot:
             stateBR = gpio.input(self.right_encoder_pin)
             stateFL = gpio.input(self.left_encoder_pin)
 
-            # print(f'counterBR = {counterBR}, counterFL = {counterFL}, GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
-            
+            # print(f'counterBR = {counterBR}, counterFL = {counterFL}, \
+            # GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
+
             # Save encoder states to txt files
-            if self.monitor_encoders == True:
+            if self.monitor_encoders is True:
                 self.MonitorEncoders('Reverse', stateBR, stateFL)
 
             if int(stateBR) != int(buttonBR):
                 buttonBR = int(stateBR)
-                counterBR += 1          
+                counterBR += 1
 
             if int(stateFL) != int(buttonFL):
                 buttonFL = int(stateFL)
-                counterFL += 1  
-            
+                counterFL += 1
+
             if counterBR >= encoder_tics:
                 self.rpwm.stop()
 
@@ -289,17 +305,19 @@ class Robot:
                 self.lpwm.stop()
 
             # PID tunning
-            if counterBR > counterFL: # Double speed to match encoder counts
-                
+            if counterBR > counterFL:  # Double speed to match encoder counts
+
                 speed_update = min(self.motor_dut_cycle * 2, 100)
                 self.rpwm.ChangeDutyCycle(speed_update)
-                # print(f'Left: {counterFL} Speed: {speed_update} Right: {counterBR}')
+                # print(f'Left: {counterFL} Speed: {speed_update} \
+                # Right: {counterBR}')
 
-            if counterFL > counterBR: # Double speed to match encoder counts
+            if counterFL > counterBR:  # Double speed to match encoder counts
 
-                speed_update = min(self.motor_dut_cycle * 2, 100) 
+                speed_update = min(self.motor_dut_cycle * 2, 100)
                 self.lpwm.ChangeDutyCycle(speed_update)
-                # print(f'Left: {counterFL} Right: {counterBR} Speed: {speed_update}')
+                # print(f'Left: {counterFL} Right: {counterBR} \
+                # Speed: {speed_update}')
 
             if counterFL == counterBR:
 
@@ -344,20 +362,21 @@ class Robot:
             stateBR = gpio.input(self.right_encoder_pin)
             stateFL = gpio.input(self.left_encoder_pin)
 
-            # print(f'counterBR = {counterBR}, counterFL = {counterFL}, GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
-            
+            # print(f'counterBR = {counterBR}, counterFL = {counterFL}, \
+            # GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
+
             # Save encoder states to txt files
-            if self.monitor_encoders == True:
+            if self.monitor_encoders is True:
                 self.MonitorEncoders('LeftPiv', stateBR, stateFL)
 
             if int(stateBR) != int(buttonBR):
                 buttonBR = int(stateBR)
-                counterBR += 1          
+                counterBR += 1
 
             if int(stateFL) != int(buttonFL):
                 buttonFL = int(stateFL)
-                counterFL += 1  
-            
+                counterFL += 1
+
             if counterBR >= encoder_tics:
                 self.rpwm.stop()
 
@@ -404,20 +423,21 @@ class Robot:
             stateBR = gpio.input(self.right_encoder_pin)
             stateFL = gpio.input(self.left_encoder_pin)
 
-            # print(f'counterBR = {counterBR}, counterFL = {counterFL}, GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
-            
+            # print(f'counterBR = {counterBR}, counterFL = {counterFL},\
+            # GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
+
             # Save encoder states to txt files
-            if self.monitor_encoders == True:
+            if self.monitor_encoders is True:
                 self.MonitorEncoders('RightPiv', stateBR, stateFL)
 
             if int(stateBR) != int(buttonBR):
                 buttonBR = int(stateBR)
-                counterBR += 1          
+                counterBR += 1
 
             if int(stateFL) != int(buttonFL):
                 buttonFL = int(stateFL)
-                counterFL += 1  
-            
+                counterFL += 1
+
             if counterBR >= encoder_tics:
                 self.rpwm.stop()
 
@@ -431,15 +451,19 @@ class Robot:
                 break
 
     def PID(self, target, present):
-        """A function which computes the PID controller output value. 'target' is used to store the setpoint
-        and 'present' is used to store the current value
+        """A function which computes the PID controller output value. 'target'
+        is used to store the setpoint and 'present' is used to store the
+        current value
         Steps to calculate output :
         1) err is the difference between the target and the present value
         2) The proportional term is Kp times the error
-        3) The error is multiplied with the time step dt and added to the integral variable
+        3) The error is multiplied with the time step dt and added to the
+        integral variable
         4) The integral term is Ki times the integral variable
-        5) The derivate term is Kd times the difference in present error and previous error divided by the time step
-        6) Total output is the bounded (withing min and max) sum of the proportional, integral, and derivate term 
+        5) The derivate term is Kd times the difference in present error and
+        previous error divided by the time step
+        6) Total output is the bounded (withing min and max) sum of the
+        proportional, integral, and derivate term
 
         Args:
             target (float): Desired final velocity
@@ -448,7 +472,7 @@ class Robot:
         Returns:
             float: Final value calculated by PID controller
         """
-        
+
         err = target - present
 
         p_term = self.kp * err
@@ -471,8 +495,9 @@ class Robot:
         """Operate robot through user input to drive and open/close gripper
 
         Args:
-            event (str): 'w', 's', 'a', 'd', 'o', 'c', 'p' to choose an action for the robot
-            value (float): Distance to travel/Angle to turn 
+            event (str): 'w', 's', 'a', 'd', 'o', 'c', 'p' to choose an action
+            for the robot
+            value (float): Distance to travel/Angle to turn
         """
 
         print(f'Key: {key}')
@@ -498,9 +523,9 @@ class Robot:
             self.CloseGripper()
         else:
             print('Invlaid key pressed!!')
-    
+
     def Teleop(self):
-        """Control loop to teleop the robot 
+        """Control loop to teleop the robot
         """
 
         while True:
@@ -512,15 +537,16 @@ class Robot:
                 'o' - Open Gripper \n \
                 'c' - Close Gripper \n \
                 'p' - Exit Program \n")
-            
+
             if key_press.lower() == 'p':
                 break
 
             value = input("Distance to travel/Angle to turn: ")
-            
+
             self.KeyInput(key_press, float(value))
 
             self.GameOver()
+
 
 if __name__ == '__main__':
 
