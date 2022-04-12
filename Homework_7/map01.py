@@ -504,7 +504,6 @@ class Robot:
         print(f'Distance/Angle: {value}')
 
         key_press = key
-        tf = 0.5
 
         # Measure distance of objects before following a command
         self.Distance()
@@ -547,10 +546,30 @@ class Robot:
 
             self.GameOver()
 
+    def Navigate(self):
+
+        # Collect navigation commands
+        cmds = []
+        while True:
+            cmd = input('Type command in the format \
+                (direction, distance/angle) "q" to finish: ').split(', ')
+
+            if cmd[0] == 'q' or cmd[1] == 'q':
+                break
+
+            cmd[1] = float(cmd[1])
+            cmds.append(cmd)
+
+        # Unpack commands and control bot
+        for key, val in cmds:
+            self.KeyInput(key, val)
+            time.sleep(1.5)
+
 
 if __name__ == '__main__':
 
     robot = Robot(monitor_encoders=False)
-    robot.Teleop()
+    # robot.Teleop()
+    robot.Navigate()
     robot.GameOver()
     gpio.cleanup()
