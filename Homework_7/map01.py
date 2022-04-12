@@ -2,6 +2,7 @@
 import RPi.GPIO as gpio
 import time
 import numpy as np
+import serial
 
 
 class Robot:
@@ -39,6 +40,9 @@ class Robot:
         self.gpwm = 0
 
         self.InitGpio()
+
+        # Identify serial connection on RPI for IMU
+        ser = serial.Serial('/dev/ttyUSB0', 9600)
 
         # PID terms
         self.dt = 0.1  # Time step
@@ -156,6 +160,43 @@ class Robot:
 
         print(f'Distance Sensor Reading: {distance}')
         return distance
+
+    def ReadIMU(self):
+        """Read IMU data and return the value as a float
+
+        Returns:
+            float: x-axis orientation value
+        """
+
+        count = 0
+
+        if(self.ser.in_waiting > 0):
+
+            count += 1
+
+            # Read serial stream
+            line = self.ser.readline()
+            print(line)
+
+            # Avoid first n-lines of serial info
+            if count > 10:
+
+                # Strip serial stream of extra characters
+                line = line.rstrip().lstrip()
+                print(line)
+
+                line = str(line)
+                line = line.strip("'")
+                line = line.strip("b'")
+
+                print(line)
+
+                # Return float
+                line = float(line)
+
+                print(f'line \n')
+
+                return line
 
     def CloseGripper(self):
         """Fully close gripper
