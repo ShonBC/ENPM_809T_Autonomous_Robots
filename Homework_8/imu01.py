@@ -13,7 +13,7 @@ while True:
         count += 1
 
         # Read serial stream
-        line = ser. readline()
+        line = ser.readline()
         print(line)
 
         # Avoid first n-lines of serial info
