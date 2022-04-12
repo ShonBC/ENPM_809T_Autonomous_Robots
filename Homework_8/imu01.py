@@ -10,7 +10,7 @@ while True:
 
     if(ser.in_waiting > 0):
 
-        count +=1
+        count += 1
 
         # Read serial stream
         line = ser. readline()
