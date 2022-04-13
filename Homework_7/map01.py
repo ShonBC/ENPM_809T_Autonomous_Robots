@@ -42,7 +42,7 @@ class Robot:
         self.InitGpio()
 
         # Identify serial connection on RPI for IMU
-        ser = serial.Serial('/dev/ttyUSB0', 9600)
+        self.ser = serial.Serial('/dev/ttyUSB0', 9600)
 
         # PID terms
         self.dt = 0.1  # Time step
@@ -170,33 +170,28 @@ class Robot:
 
         count = 0
 
-        if(self.ser.in_waiting > 0):
+        while count < 11:
+            if(self.ser.in_waiting > 0):
 
-            count += 1
+                count += 1
 
-            # Read serial stream
-            line = self.ser.readline()
-            print(line)
+                # Read serial stream
+                line = self.ser.readline()
 
-            # Avoid first n-lines of serial info
-            if count > 10:
+                # Avoid first n-lines of serial info
+                if count > 10:
 
-                # Strip serial stream of extra characters
-                line = line.rstrip().lstrip()
-                print(line)
+                    # Strip serial stream of extra characters
+                    line = line.rstrip().lstrip()
 
-                line = str(line)
-                line = line.strip("'")
-                line = line.strip("b'")
+                    line = str(line)
+                    line = line.strip("'")
+                    line = line.strip("b'")
 
-                print(line)
+                    # Return float
+                    line = float(line)
 
-                # Return float
-                line = float(line)
-
-                print(f'line \n')
-
-                return line
+                    return line
 
     def CloseGripper(self):
         """Fully close gripper
@@ -222,6 +217,10 @@ class Robot:
         # Total encoder tics to drive the desired distance
         encoder_tics = self.drive_constant * distance
         # print(f'Encoder Tics: {encoder_tics}')
+
+        # Get Initial IMU angle reading
+        init_angle = self.ReadIMU()
+        print(f'angle: {init_angle}')
 
         # Left wheel
         gpio.output(self.lb_motor_pin, True)
@@ -610,7 +609,10 @@ class Robot:
 if __name__ == '__main__':
 
     robot = Robot(monitor_encoders=False)
-    # robot.Teleop()
-    robot.Navigate()
+    robot.Teleop()
+    # robot.Navigate()
+    # while True:
+    #     init_angle = robot.ReadIMU()
+    #     print(f'angle: {init_angle}')
     robot.GameOver()
     gpio.cleanup()
