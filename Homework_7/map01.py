@@ -43,6 +43,7 @@ class Robot:
 
         # Identify serial connection on RPI for IMU
         self.ser = serial.Serial('/dev/ttyUSB0', 9600)
+        self.imu_angle = self.ReadIMU()
 
         # PID terms
         self.dt = 0.1  # Time step
@@ -161,46 +162,49 @@ class Robot:
         print(f'Distance Sensor Reading: {distance}')
         return distance
 
-    def ReadIMU(self, count):
+    def ReadIMU(self, ):
         """Read IMU data and return the value as a float
 
         Returns:
             float: x-axis orientation value
         """
 
-        # count = 0
+        count = 0
 
-        if(self.ser.in_waiting > 0):
+        while True:
+            if(self.ser.in_waiting > 0):
 
-            count += 1
+                count += 1
 
-            # Read serial stream
-            line = self.ser.readline()
+                # Read serial stream
+                line = self.ser.readline()
 
-            # Avoid first n-lines of serial info
-            if count > 10:
+                # Avoid first n-lines of serial info
+                if count > 10:
 
-                # Strip serial stream of extra characters
-                line = line.rstrip().lstrip()
+                    # Strip serial stream of extra characters
+                    line = line.rstrip().lstrip()
 
-                line = str(line)
-                line = line.strip("'")
-                line = line.strip("b'")
+                    line = str(line)
+                    line = line.strip("'")
+                    line = line.strip("b'")
 
-                # Return float
-                try:
+                    # Return float
                     line = float(line)
-                except ValueError:
-                    line = 0
-                print(line)
-                print(count)
 
-                return line, count
+                    return line
 
-        else:
-            line = float(0)
-            count += 1
-            return line, count
+    def test(self, line):
+        # Strip serial stream of extra characters
+        line = line.rstrip().lstrip()
+
+        line = str(line)
+        line = line.strip("'")
+        line = line.strip("b'")
+
+        # Return float
+        line = float(line)
+        return line
 
     def CloseGripper(self):
         """Fully close gripper
@@ -228,6 +232,18 @@ class Robot:
         # print(f'Encoder Tics: {encoder_tics}')
 
         # Get Initial IMU angle reading
+        # count = 0
+        # while True:
+        #     if(self.ser.in_waiting > 0):
+
+        #         count += 1
+
+        #         # Read serial stream
+        #         imu_data = self.ser.readline()
+
+        #         # Avoid first n-lines of serial info
+        #         if count > 10:
+        #             break
         init_angle = 0
         print(f'angle: {init_angle}')
 
@@ -250,10 +266,12 @@ class Robot:
         i = 0
         while i <= encoder_tics:
 
-            updated_angle = self.ReadIMU()
+            # updated_angle = self.ReadIMU()
+            updated_angle = self.ser.readline()
+            updated_angle = self.test(updated_angle)
             if 300 < updated_angle < 360:
                 updated_angle -= 360
-            # print(f'Init Angle: {init_angle} New: {updated_angle}')
+            print(f'Init Angle: {init_angle} New: {updated_angle}')
 
             stateBR = gpio.input(self.right_encoder_pin)
             stateFL = gpio.input(self.left_encoder_pin)
@@ -633,11 +651,11 @@ class Robot:
 if __name__ == '__main__':
 
     robot = Robot(monitor_encoders=False)
-    # robot.Teleop()
+    robot.Teleop()
     # robot.Navigate()
-    count = 0
-    while True:
-        init_angle, count = robot.ReadIMU(count)
-        print(f'angle: {init_angle}')
+    # count = 0
+    # while True:
+    #     # init_angle, count = robot.ReadIMU(count)
+    #     print(f'angle: {robot.imu_angle}')
     robot.GameOver()
     gpio.cleanup()
