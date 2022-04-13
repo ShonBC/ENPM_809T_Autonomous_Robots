@@ -14,7 +14,7 @@ while True:
 
         # Read serial stream
         line = ser.readline()
-        print(line)
+        # print(line)
 
         # Avoid first n-lines of serial info
         if count > 10:
@@ -22,7 +22,7 @@ while True:
             # Strip serial stream of extra characters
 
             line = line.rstrip().lstrip()
-            print(line)
+            # print(line)
 
             line = str(line)
             line = line.strip("'")
