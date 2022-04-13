@@ -161,37 +161,46 @@ class Robot:
         print(f'Distance Sensor Reading: {distance}')
         return distance
 
-    def ReadIMU(self):
+    def ReadIMU(self, count):
         """Read IMU data and return the value as a float
 
         Returns:
             float: x-axis orientation value
         """
 
-        count = 0
+        # count = 0
 
-        while count < 11:
-            if(self.ser.in_waiting > 0):
+        if(self.ser.in_waiting > 0):
 
-                count += 1
+            count += 1
 
-                # Read serial stream
-                line = self.ser.readline()
+            # Read serial stream
+            line = self.ser.readline()
 
-                # Avoid first n-lines of serial info
-                if count > 10:
+            # Avoid first n-lines of serial info
+            if count > 10:
 
-                    # Strip serial stream of extra characters
-                    line = line.rstrip().lstrip()
+                # Strip serial stream of extra characters
+                line = line.rstrip().lstrip()
 
-                    line = str(line)
-                    line = line.strip("'")
-                    line = line.strip("b'")
+                line = str(line)
+                line = line.strip("'")
+                line = line.strip("b'")
 
-                    # Return float
+                # Return float
+                try:
                     line = float(line)
+                except ValueError:
+                    line = 0
+                print(line)
+                print(count)
 
-                    return line
+                return line, count
+
+        else:
+            line = float(0)
+            count += 1
+            return line, count
 
     def CloseGripper(self):
         """Fully close gripper
@@ -219,7 +228,7 @@ class Robot:
         # print(f'Encoder Tics: {encoder_tics}')
 
         # Get Initial IMU angle reading
-        init_angle = self.ReadIMU()
+        init_angle = 0
         print(f'angle: {init_angle}')
 
         # Left wheel
@@ -241,11 +250,16 @@ class Robot:
         i = 0
         while i <= encoder_tics:
 
+            updated_angle = self.ReadIMU()
+            if 300 < updated_angle < 360:
+                updated_angle -= 360
+            # print(f'Init Angle: {init_angle} New: {updated_angle}')
+
             stateBR = gpio.input(self.right_encoder_pin)
             stateFL = gpio.input(self.left_encoder_pin)
 
-            # print(f'counterBR = {counterBR}, counterFL = {counterFL}, \
-            # GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
+            print(f'counterBR = {counterBR}, counterFL = {counterFL}, \
+            GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
 
             # Save encoder states to txt files
             if self.monitor_encoders is True:
@@ -266,6 +280,14 @@ class Robot:
                 self.lpwm.stop()
 
             # PID tunning
+            # if init_angle > updated_angle + 5:
+            #     speed_update = min(self.motor_dut_cycle * 2, 100)
+            #     self.lpwm.ChangeDutyCycle(speed_update)
+
+            # if init_angle < updated_angle - 5:
+            #     speed_update = min(self.motor_dut_cycle * 2, 100)
+            #     self.rpwm.ChangeDutyCycle(speed_update)
+
             if counterBR > counterFL:  # Double speed to match encoder counts
 
                 speed_update = min(self.motor_dut_cycle * 2, 100)
@@ -287,6 +309,8 @@ class Robot:
 
             # Break when both encoder counts reached the desired total
             if counterBR >= encoder_tics and counterFL >= encoder_tics:
+                self.rpwm.stop()
+                self.lpwm.stop()
                 break
 
     def Reverse(self, distance):
@@ -609,10 +633,11 @@ class Robot:
 if __name__ == '__main__':
 
     robot = Robot(monitor_encoders=False)
-    robot.Teleop()
+    # robot.Teleop()
     # robot.Navigate()
-    # while True:
-    #     init_angle = robot.ReadIMU()
-    #     print(f'angle: {init_angle}')
+    count = 0
+    while True:
+        init_angle, count = robot.ReadIMU(count)
+        print(f'angle: {init_angle}')
     robot.GameOver()
     gpio.cleanup()
