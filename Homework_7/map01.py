@@ -218,9 +218,9 @@ class Robot:
         encoder_tics = self.drive_constant * distance
         # print(f'Encoder Tics: {encoder_tics}')
 
-        # Get Initial IMU angle reading
-        init_angle = self.ReadIMU()
-        print(f'angle: {init_angle}')
+        # # Get Initial IMU angle reading
+        # init_angle = self.ReadIMU()
+        # print(f'angle: {init_angle}')
 
         # Left wheel
         gpio.output(self.lb_motor_pin, True)
