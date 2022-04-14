@@ -226,7 +226,6 @@ class Robot:
 
         # Total encoder tics to drive the desired distance
         encoder_tics = self.drive_constant * distance
-        # print(f'Encoder Tics: {encoder_tics}')
 
         # Get Initial IMU angle reading
         init_angle = 0
@@ -257,13 +256,9 @@ class Robot:
 
                 if 300 < updated_angle < 360:
                     updated_angle -= 360
-                # print(f'Init Angle: {init_angle} New Angle: {updated_angle}')
 
                 stateBR = gpio.input(self.right_encoder_pin)
                 stateFL = gpio.input(self.left_encoder_pin)
-
-                # print(f'counterBR = {counterBR}, counterFL = {counterFL}, \
-                # GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
 
                 # Save encoder states to txt files
                 if self.monitor_encoders is True:
@@ -292,33 +287,19 @@ class Robot:
                 high_thresh = init_angle + imu_margin
 
                 if counterBR > counterFL or updated_angle < low_thresh:
-                    print(f'Low: {low_thresh} Update: {updated_angle}')
 
                     # Double speed to match encoder counts
                     speed_update = min(self.motor_dut_cycle * 2, 100)
                     self.lpwm.ChangeDutyCycle(speed_update)
-                    # print(f'Left: {counterFL} Speed: {speed_update} \
-                    # Right: {counterBR}')
-
-                    # Cut other motor speed in half
-                    # self.rpwm.ChangeDutyCycle(speed_update / 4)
 
                 if counterFL > counterBR or updated_angle > high_thresh:
-                    print(f'High: {high_thresh} Update: {updated_angle}')
 
                     # Double speed to match encoder counts
                     speed_update = min(self.motor_dut_cycle * 2, 100)
                     self.rpwm.ChangeDutyCycle(speed_update)
-                    # print(f'Left: {counterFL} Right: {counterBR} \
-                    # Speed: {speed_update}')
-
-                    # Cut other motor speed in half
-                    # self.lpwm.ChangeDutyCycle(speed_update / 4)
 
                 if counterFL == counterBR or \
                    low_thresh < updated_angle < high_thresh:
-
-                    print('equal =====')
 
                     self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
                     self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
