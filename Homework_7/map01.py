@@ -15,7 +15,7 @@ class Robot:
 
         # Motor pins
         self.motor_frequency = 50
-        self.motor_dut_cycle = 10 # Controls speed (prev 45)
+        self.motor_dut_cycle = 45  # Controls speed
         self.lb_motor_pin = 31
         self.lf_motor_pin = 33
         self.rb_motor_pin = 35
@@ -45,7 +45,7 @@ class Robot:
         # Identify serial connection on RPI for IMU
         self.ser = serial.Serial('/dev/ttyUSB0', 9600)
         self.monitor_imu = monitor_imu
-        # self.imu_angle = self.ReadIMU()
+        self.imu_angle = 0
 
         # PID terms
         self.dt = 0.1  # Time step
@@ -421,16 +421,17 @@ class Robot:
 
         # Get Initial IMU angle reading
         init_angle = 0
+        self.motor_dut_cycle = 10
 
         # Left wheel
         gpio.output(self.lb_motor_pin, False)
         gpio.output(self.lf_motor_pin, True)
-        self.lpwm.start(0)
+        self.lpwm.start(self.motor_dut_cycle)
 
         # Right wheel
         gpio.output(self.rb_motor_pin, False)
         gpio.output(self.rf_motor_pin, True)
-        self.rpwm.start(0)
+        self.rpwm.start(self.motor_dut_cycle)
 
         counterBR = np.uint64(0)
         counterFL = np.uint64(0)
@@ -492,6 +493,9 @@ class Robot:
         # print(self.drive_constant)
         # print(encoder_tics)
 
+        # Get Initial IMU angle reading
+        init_angle = 0
+
         # Left wheel
         gpio.output(self.lb_motor_pin, True)
         gpio.output(self.lf_motor_pin, False)
@@ -508,38 +512,47 @@ class Robot:
         buttonBR = int(0)
         buttonFL = int(0)
 
-        i = 0
-        while i <= encoder_tics:
+        count = 0
+        while True:
 
-            stateBR = gpio.input(self.right_encoder_pin)
-            stateFL = gpio.input(self.left_encoder_pin)
+            if self.ser.in_waiting > 0:
+                updated_angle, count = self.ReadIMU(count)
 
-            # print(f'counterBR = {counterBR}, counterFL = {counterFL},\
-            # GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
+            if count > 10:  # Ignore the first 10 IMU readings
 
-            # Save encoder states to txt files
-            if self.monitor_encoders is True:
-                self.MonitorEncoders('RightPiv', stateBR, stateFL)
+                # if 180 < updated_angle < 360:
+                #     updated_angle -= 360
 
-            if int(stateBR) != int(buttonBR):
-                buttonBR = int(stateBR)
-                counterBR += 1
+                stateBR = gpio.input(self.right_encoder_pin)
+                stateFL = gpio.input(self.left_encoder_pin)
 
-            if int(stateFL) != int(buttonFL):
-                buttonFL = int(stateFL)
-                counterFL += 1
+                # print(f'counterBR = {counterBR}, counterFL = {counterFL},\
+                # GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
 
-            if counterBR >= encoder_tics:
-                self.rpwm.stop()
+                # Save encoder states to txt files
+                if self.monitor_encoders is True:
+                    self.MonitorEncoders('RightPiv', stateBR, stateFL)
 
-            if counterFL >= encoder_tics:
-                self.lpwm.stop()
+                if int(stateBR) != int(buttonBR):
+                    buttonBR = int(stateBR)
+                    counterBR += 1
 
-            # Break when both encoder counts reached the desired total
-            if counterBR >= encoder_tics:
-                self.rpwm.stop()
-                self.lpwm.stop()
-                break
+                if int(stateFL) != int(buttonFL):
+                    buttonFL = int(stateFL)
+                    counterFL += 1
+
+                if counterBR >= encoder_tics:
+                    self.rpwm.stop()
+
+                if counterFL >= encoder_tics:
+                    self.lpwm.stop()
+
+                # Break when both encoder counts reached the desired total
+                angle_check = 360 - updated_angle
+                if counterBR >= encoder_tics or angle_check == angle:
+                    self.rpwm.stop()
+                    self.lpwm.stop()
+                    break
 
     def PID(self, target, present):
         """A function which computes the PID controller output value. 'target'
