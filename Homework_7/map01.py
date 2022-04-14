@@ -15,7 +15,7 @@ class Robot:
 
         # Motor pins
         self.motor_frequency = 50
-        self.motor_dut_cycle = 45  # Controls speed
+        self.motor_dut_cycle = 20  # Controls speed (prev 45)
         self.lb_motor_pin = 31
         self.lf_motor_pin = 33
         self.rb_motor_pin = 35
@@ -61,9 +61,7 @@ class Robot:
         # Robot properties
         self.gear_ratio = 120 / 1  # 1:120
         self.wheel_diameter = 0.065  # Meters
-        # self.wheel_base = 0.1524 # Meters (6")
         self.wheel_base = 0.1397  # Meters (5.5")
-        # self.wheel_base = 0.127 # Meters (5")
         self.tics_per_rev = 20  # Number of encoder tics per 1 wheel revolution
         self.drive_constant = self.tics_per_rev \
             / (2 * np.pi * (self.wheel_diameter / 2))
@@ -174,8 +172,12 @@ class Robot:
     def ReadIMU(self, count):
         """Read IMU data and return the value as a float
 
+        Args:
+            count (int): Number of times IMU reading has been read
+
         Returns:
             float: x-axis orientation value
+              int: Number of times IMU reading has been read
         """
 
         count += 1
@@ -200,18 +202,6 @@ class Robot:
             line = 0
 
         return line, count
-
-    def test(self, line):
-        # Strip serial stream of extra characters
-        line = line.rstrip().lstrip()
-
-        line = str(line)
-        line = line.strip("'")
-        line = line.strip("b'")
-
-        # Return float
-        line = float(line)
-        return line
 
     def CloseGripper(self):
         """Fully close gripper
@@ -263,20 +253,17 @@ class Robot:
             if self.ser.in_waiting > 0:
                 updated_angle, count = self.ReadIMU(count)
 
-            if count > 10:
+            if count > 10:  # Ignore the first 10 IMU readings
 
-                # # updated_angle = self.ReadIMU()
-                # updated_angle = self.ser.readline()
-                # updated_angle = self.test(updated_angle)
                 if 300 < updated_angle < 360:
                     updated_angle -= 360
-                print(f'Init Angle: {init_angle} New: {updated_angle}')
+                # print(f'Init Angle: {init_angle} New Angle: {updated_angle}')
 
                 stateBR = gpio.input(self.right_encoder_pin)
                 stateFL = gpio.input(self.left_encoder_pin)
 
-                print(f'counterBR = {counterBR}, counterFL = {counterFL}, \
-                GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
+                # print(f'counterBR = {counterBR}, counterFL = {counterFL}, \
+                # GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
 
                 # Save encoder states to txt files
                 if self.monitor_encoders is True:
@@ -300,8 +287,12 @@ class Robot:
                     self.lpwm.stop()
 
                 # PID tunning
-                imu_margin = 0.25
-                if counterBR > counterFL or updated_angle < init_angle - imu_margin:
+                imu_margin = 0.5
+                low_thresh = init_angle - imu_margin
+                high_thresh = init_angle + imu_margin
+
+                if counterBR > counterFL or updated_angle < low_thresh:
+                    print(f'Low: {low_thresh} Update: {updated_angle}')
 
                     # Double speed to match encoder counts
                     speed_update = min(self.motor_dut_cycle * 2, 100)
@@ -310,9 +301,10 @@ class Robot:
                     # Right: {counterBR}')
 
                     # Cut other motor speed in half
-                    self.rpwm.ChangeDutyCycle(speed_update / 4)
+                    # self.rpwm.ChangeDutyCycle(speed_update / 4)
 
-                if counterFL > counterBR or updated_angle > init_angle + imu_margin:
+                if counterFL > counterBR or updated_angle > high_thresh:
+                    print(f'High: {high_thresh} Update: {updated_angle}')
 
                     # Double speed to match encoder counts
                     speed_update = min(self.motor_dut_cycle * 2, 100)
@@ -321,9 +313,12 @@ class Robot:
                     # Speed: {speed_update}')
 
                     # Cut other motor speed in half
-                    self.lpwm.ChangeDutyCycle(speed_update / 4)
+                    # self.lpwm.ChangeDutyCycle(speed_update / 4)
 
-                if counterFL == counterBR or init_angle - imu_margin < updated_angle or updated_angle < init_angle + imu_margin:
+                if counterFL == counterBR or \
+                   low_thresh < updated_angle < high_thresh:
+
+                    print('equal =====')
 
                     self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
                     self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
