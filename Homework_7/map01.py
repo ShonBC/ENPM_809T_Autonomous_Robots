@@ -423,10 +423,13 @@ class Robot:
         # Get Initial IMU angle reading
         init_angle = self.imu_angle
 
-        goal_angle = init_angle + angle
+        if init_angle < 0:
+            init_angle += 360
 
-        if goal_angle > 360:
-            goal_angle -= 360
+        goal_angle = init_angle - angle
+
+        if goal_angle < 0:
+            goal_angle += 360
 
         # Left wheel
         gpio.output(self.lb_motor_pin, False)
@@ -450,8 +453,8 @@ class Robot:
             if self.ser.in_waiting > 0:
                 updated_angle, count = self.ReadIMU(count)
 
-            if 180 < updated_angle < 360:
-                updated_angle = 360 - updated_angle
+            # if 180 < updated_angle < 360:
+            #     updated_angle = 360 - updated_angle
 
             if count > 10:  # Ignore the first 10 IMU readings
 
@@ -483,10 +486,10 @@ class Robot:
                 #     self.lpwm.stop()
 
                 # Break when both encoder counts reached the desired total
-                print(f'Goal: {goal_angle} Angle: {updated_angle} Dutycycle: {self.motor_dut_cycle}')
+                print(f'Goal: {goal_angle} Angle: {updated_angle} Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
 
                 # PID tunning
-                imu_margin = 1
+                imu_margin = 3
                 low_thresh = goal_angle - imu_margin
                 high_thresh = goal_angle + imu_margin
 
