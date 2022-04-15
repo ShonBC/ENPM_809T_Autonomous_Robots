@@ -257,8 +257,8 @@ class Robot:
             if self.ser.in_waiting > 0:
                 updated_angle, count = self.ReadIMU(count)
 
-            if 180 < updated_angle < 360:
-                updated_angle -= 360
+            # if 180 < updated_angle < 360:
+            #     updated_angle -= 360
 
             stateBR = gpio.input(self.right_encoder_pin)
             stateFL = gpio.input(self.left_encoder_pin)
@@ -285,10 +285,18 @@ class Robot:
                 self.lpwm.stop()
 
             # PID tunning
-            imu_margin = 0.5
+            imu_margin = 1
             low_thresh = init_angle - imu_margin
             high_thresh = init_angle + imu_margin
-            print(f'Goal: {encoder_tics} R: {counterBR} L: {counterFL} Angle: {updated_angle} Dutycycle: {self.motor_dut_cycle}')
+
+            if low_thresh < 0:
+                low_thresh += 360
+
+            if high_thresh > 359:
+                high_thresh -= 360
+            # At 0 the low thresh is 359, high is at 1. this checks if the value is 
+            # print(f'Goal: {encoder_tics} R: {counterBR} L: {counterFL} Angle: {updated_angle} Dutycycle: {self.motor_dut_cycle}')
+            print(f'Angle: {updated_angle} Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
 
             if updated_angle < low_thresh:
 
