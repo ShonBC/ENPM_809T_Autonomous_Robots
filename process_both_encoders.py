@@ -7,7 +7,7 @@ import numpy as np
 if __name__ == '__main__':
 
     title = 'Motor Encoder Analysis Driving in Reverse 1 meter'
-    
+
     # Load imu angular data in the 5th column of the data file
     BRstates = np.loadtxt('Homweork_7/docs/Reverse_BRencoderstates.txt')
     FLstates = np.loadtxt('Homweork_7/docs/Reverse_FLencoderstates.txt')
