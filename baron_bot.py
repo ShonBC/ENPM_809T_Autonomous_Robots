@@ -4,14 +4,18 @@ import RPi.GPIO as gpio
 import time
 import numpy as np
 import serial
+import cv2
+import imutils
 
 
 class Robot:
 
-    def __init__(self, monitor_encoders=False, monitor_imu=False):
+    def __init__(self, monitor_encoders=False, monitor_imu=False, debug_mode=False):
 
         # Save Encoder data to text files
         self.monitor_encoders = monitor_encoders
+
+        self.debug_mode = debug_mode
 
         # Motor pins
         self.motor_frequency = 50
@@ -46,6 +50,7 @@ class Robot:
         self.ser = serial.Serial('/dev/ttyUSB0', 9600)
         self.monitor_imu = monitor_imu
         self.imu_angle = 0
+        self.imu_margin = 3
 
         # PID terms
         self.dt = 0.1  # Time step
@@ -497,9 +502,8 @@ class Robot:
                 print(f'Goal: {goal_angle} Angle: {updated_angle} Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
 
                 # PID tunning
-                imu_margin = 3
-                low_thresh = goal_angle - imu_margin
-                high_thresh = goal_angle + imu_margin
+                low_thresh = goal_angle - self.imu_margin
+                high_thresh = goal_angle + self.imu_margin
 
                 # Break when the current angle is within a threshold of the
                 # goal angle
@@ -536,10 +540,10 @@ class Robot:
         if init_angle < 0:
             init_angle += 360
 
-        goal_angle = init_angle - angle
+        goal_angle = init_angle + angle
 
-        if goal_angle < 0:
-            goal_angle += 360
+        if goal_angle > 360:
+            goal_angle -= 360
 
         # Left wheel
         gpio.output(self.lb_motor_pin, True)
@@ -593,9 +597,10 @@ class Robot:
                 #     self.lpwm.stop()
 
                 # PID tunning
-                imu_margin = 3
-                low_thresh = goal_angle - imu_margin
-                high_thresh = goal_angle + imu_margin
+                low_thresh = goal_angle - self.imu_margin
+                high_thresh = goal_angle + self.imu_margin
+
+                print(f'Goal: {goal_angle} Angle: {updated_angle} Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
 
                 # Break when the current angle is within a threshold of the
                 # goal angle
@@ -654,6 +659,42 @@ class Robot:
         output = max(self.min_val, min(self.max_val, output))
 
         return output
+
+    def ColorRange(self, color='green'):
+
+        if color == 'red':
+            low_red = np.array([0, 34, 181])
+            high_red = np.array([179, 140, 255])
+            return low_red, high_red
+
+        elif color == 'green':
+            low_green = np.array([50, 100, 70])
+            high_green = np.array([90, 255, 255])
+            return low_green, high_green
+
+        elif color == 'yellow':
+            low_yellow = np.array([0, 134, 134])
+            high_yellow = np.array([179, 255, 255])
+            return low_yellow, high_yellow
+
+    def DistFromCenter(self, x_pos):
+
+        midline = 640 / 2
+
+        pix_per_deg = 38.88 / 640
+
+        pos = x_pos - midline
+
+        if pos > 0:
+            angle = pix_per_deg * pos
+            self.RightPiv(angle)
+            direction = 'Right'
+        else:
+            angle = pix_per_deg * abs(pos)
+            self.LeftPiv(angle)
+            direction = 'Left'
+
+        print(f'Angle to Turn {direction}: {angle}')
 
     def KeyInput(self, key, value):
         """Operate robot through user input to drive and open/close gripper
@@ -730,14 +771,126 @@ class Robot:
             time.sleep(1.5)
 
 
+def TrackColor(robot):
+    cap = cv2.VideoCapture(0)
+
+    ret, frame = cap.read()
+    if ret:    # frame captured without any errors
+
+        frame = cv2.flip(frame, 0)
+        frame = cv2.flip(frame, 1)
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        low_thresh, high_thresh = robot.ColorRange()
+        mask = cv2.inRange(hsv, low_thresh, high_thresh)
+        # color_mask = cv2.bitwise_and(frame, frame, mask=mask)
+
+        # Find the contours
+        cnts = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        cnts = imutils.grab_contours(cnts)
+
+        # Draw contours and track center
+        for c in cnts:
+
+            # (x, y), radius = cv2.minEnclosingCircle(c)
+            # center = (int(x), int(y))
+            # radius = int(radius)
+
+            rect = cv2.boundingRect(c)
+            min_box_size = 15
+            if rect[2] < min_box_size or rect[3] < min_box_size:
+                continue
+
+            x, y, w, h = rect
+
+            center = (int(x + w / 2), int(y + h / 2))
+
+            cv2.rectangle(frame, (x, y), (x + w, y + h),
+                          color=(0, 255, 255), thickness=2)
+
+            robot.DistFromCenter(x)
+
+            # cv2.circle(frame, center, radius,
+            #            color=(0, 255, 255), thickness=2)
+            cv2.circle(frame, center, 1, color=(0, 0, 255), thickness=4)
+
+        # The original input frame is shown in the window
+        cv2.imshow('Original', frame)
+        cv2.waitKey(0)
+
+    # while(True):
+
+    #     # reads frames from a camera
+    #     # ret checks return at each frame
+    #     ret, frame = cap.read()
+
+    #     frame = cv2.flip(frame, 0)
+
+    #     if not ret:
+    #         break
+
+    #     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    #     low_thresh, high_thresh = robot.ColorRange()
+    #     mask = cv2.inRange(hsv, low_thresh, high_thresh)
+    #     # color_mask = cv2.bitwise_and(frame, frame, mask=mask)
+
+    #     # Find the contours
+    #     cnts = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    #     cnts = imutils.grab_contours(cnts)
+
+    #     # Draw contours and track center
+    #     for c in cnts:
+
+    #         # (x, y), radius = cv2.minEnclosingCircle(c)
+    #         # center = (int(x), int(y))
+    #         # radius = int(radius)
+
+    #         rect = cv2.boundingRect(c)
+    #         if rect[2] < 50 or rect[3] < 50:
+    #             continue
+
+    #         x, y, w, h = rect
+
+    #         center = (int(x + w / 2), int(y + h / 2))
+
+    #         cv2.rectangle(frame, (x, y), (x + w, y + h),
+    #                       color=(0, 255, 255), thickness=2)
+
+    #         robot.DistFromCenter(x)
+
+    #         # cv2.circle(frame, center, radius,
+    #         #            color=(0, 255, 255), thickness=2)
+    #         cv2.circle(frame, center, 1, color=(0, 0, 255), thickness=4)
+
+    #     # The original input frame is shown in the window
+    #     cv2.imshow('Original', frame)
+    #     # cv2.imshow('Green Mask', mask)
+    #     # compare_frame = np.hstack((frame, hsv,
+    #     #                            cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)))
+    #     # cv2.imshow('hstack: ', compare_frame)
+
+    #     # Wait for 'a' key to stop the program
+    #     if cv2.waitKey(1) & 0xFF == ord('q'):
+    #         break
+
+    # Close the window / Release webcam
+    cap.release()
+
+    # De-allocate any associated memory usage
+    cv2.destroyAllWindows()
+
+
 if __name__ == '__main__':
 
-    robot = Robot(monitor_encoders=False, monitor_imu=True)
-    robot.Teleop()
+    robot = Robot(monitor_encoders=False, monitor_imu=False)
+
+    for i in range(10):
+        TrackColor(robot)
+    # robot.Teleop()
     # robot.Navigate()
     # count = 0
     # while True:
     #     # init_angle, count = robot.ReadIMU(count)
     #     print(f'angle: {robot.imu_angle}')
+
     robot.GameOver()
     gpio.cleanup()
