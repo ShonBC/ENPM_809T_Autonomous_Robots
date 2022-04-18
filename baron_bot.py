@@ -1,5 +1,4 @@
 
-from turtle import up
 import RPi.GPIO as gpio
 import time
 import numpy as np
@@ -10,7 +9,9 @@ import imutils
 
 class Robot:
 
-    def __init__(self, monitor_encoders=False, monitor_imu=False, debug_mode=False):
+    def __init__(self, monitor_encoders=False,
+                 monitor_imu=False,
+                 debug_mode=False):
 
         # Save Encoder data to text files
         self.monitor_encoders = monitor_encoders
@@ -299,9 +300,12 @@ class Robot:
 
             if high_thresh > 359:
                 high_thresh -= 360
-            # At 0 the low thresh is 359, high is at 1. this checks if the value is 
-            # print(f'Goal: {encoder_tics} R: {counterBR} L: {counterFL} Angle: {updated_angle} Dutycycle: {self.motor_dut_cycle}')
-            print(f'Angle: {updated_angle} Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
+            # print(f'Goal: {encoder_tics} R: {counterBR} L: {counterFL}\
+            #  Angle: {updated_angle} Dutycycle: {self.motor_dut_cycle}')
+
+            if self.debug_mode:
+                print(f'Angle: {updated_angle} Initial: {init_angle}\
+                    Dutycycle: {self.motor_dut_cycle}')
 
             if updated_angle < low_thresh:
 
@@ -396,7 +400,9 @@ class Robot:
             low_thresh = init_angle - imu_margin
             high_thresh = init_angle + imu_margin
 
-            print(f'Goal: {encoder_tics} R: {counterBR} L: {counterFL} Angle: {updated_angle} Dutycycle: {self.motor_dut_cycle}')
+            if self.debug_mode:
+                print(f'Goal: {encoder_tics} R: {counterBR} L: {counterFL}\
+                    Angle: {updated_angle} Dutycycle: {self.motor_dut_cycle}')
 
             if updated_angle < low_thresh:
 
@@ -498,8 +504,9 @@ class Robot:
                 # if counterFL >= encoder_tics:
                 #     self.lpwm.stop()
 
-                # Break when both encoder counts reached the desired total
-                print(f'Goal: {goal_angle} Angle: {updated_angle} Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
+                if self.debug_mode:
+                    print(f'Goal: {goal_angle} Angle: {updated_angle}\
+                        Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
 
                 # PID tunning
                 low_thresh = goal_angle - self.imu_margin
@@ -600,7 +607,9 @@ class Robot:
                 low_thresh = goal_angle - self.imu_margin
                 high_thresh = goal_angle + self.imu_margin
 
-                print(f'Goal: {goal_angle} Angle: {updated_angle} Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
+                if self.debug_mode:
+                    print(f'Goal: {goal_angle} Angle: {updated_angle}\
+                        Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
 
                 # Break when the current angle is within a threshold of the
                 # goal angle
