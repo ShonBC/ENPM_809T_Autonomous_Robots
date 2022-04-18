@@ -501,6 +501,8 @@ class Robot:
                 low_thresh = goal_angle - imu_margin
                 high_thresh = goal_angle + imu_margin
 
+                # Break when the current angle is within a threshold of the
+                # goal angle
                 if low_thresh < updated_angle < high_thresh:
 
                     # Left wheel
@@ -529,7 +531,15 @@ class Robot:
         # print(encoder_tics)
 
         # Get Initial IMU angle reading
-        init_angle = 0
+        init_angle = self.imu_angle
+
+        if init_angle < 0:
+            init_angle += 360
+
+        goal_angle = init_angle - angle
+
+        if goal_angle < 0:
+            goal_angle += 360
 
         # Left wheel
         gpio.output(self.lb_motor_pin, True)
@@ -555,9 +565,6 @@ class Robot:
 
             if count > 10:  # Ignore the first 10 IMU readings
 
-                # if 180 < updated_angle < 360:
-                #     updated_angle -= 360
-
                 stateBR = gpio.input(self.right_encoder_pin)
                 stateFL = gpio.input(self.left_encoder_pin)
 
@@ -568,6 +575,9 @@ class Robot:
                 if self.monitor_encoders is True:
                     self.MonitorEncoders('RightPiv', stateBR, stateFL)
 
+                if self.monitor_imu is True:
+                    self.MonitorIMU(updated_angle)
+
                 if int(stateBR) != int(buttonBR):
                     buttonBR = int(stateBR)
                     counterBR += 1
@@ -576,17 +586,32 @@ class Robot:
                     buttonFL = int(stateFL)
                     counterFL += 1
 
-                if counterBR >= encoder_tics:
-                    self.rpwm.stop()
+                # if counterBR >= encoder_tics:
+                #     self.rpwm.stop()
 
-                if counterFL >= encoder_tics:
+                # if counterFL >= encoder_tics:
+                #     self.lpwm.stop()
+
+                # PID tunning
+                imu_margin = 3
+                low_thresh = goal_angle - imu_margin
+                high_thresh = goal_angle + imu_margin
+
+                # Break when the current angle is within a threshold of the
+                # goal angle
+                if low_thresh < updated_angle < high_thresh:
+
+                    # Left wheel
+                    gpio.output(self.lb_motor_pin, False)
+                    gpio.output(self.lf_motor_pin, False)
                     self.lpwm.stop()
 
-                # Break when both encoder counts reached the desired total
-                angle_check = 360 - updated_angle
-                if counterBR >= encoder_tics or angle_check == angle:
+                    # Right wheel
+                    gpio.output(self.rb_motor_pin, False)
+                    gpio.output(self.rf_motor_pin, False)
                     self.rpwm.stop()
-                    self.lpwm.stop()
+
+                    self.imu_angle = updated_angle
                     break
 
     def PID(self, target, present):
