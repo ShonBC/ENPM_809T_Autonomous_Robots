@@ -1,16 +1,21 @@
 
+from turtle import up
 import RPi.GPIO as gpio
 import time
 import numpy as np
 import serial
+import cv2
+import imutils
 
 
 class Robot:
 
-    def __init__(self, monitor_encoders=False):
+    def __init__(self, monitor_encoders=False, monitor_imu=False, debug_mode=False):
 
         # Save Encoder data to text files
         self.monitor_encoders = monitor_encoders
+
+        self.debug_mode = debug_mode
 
         # Motor pins
         self.motor_frequency = 50
@@ -43,6 +48,9 @@ class Robot:
 
         # Identify serial connection on RPI for IMU
         self.ser = serial.Serial('/dev/ttyUSB0', 9600)
+        self.monitor_imu = monitor_imu
+        self.imu_angle = 0
+        self.imu_margin = 3
 
         # PID terms
         self.dt = 0.1  # Time step
@@ -58,9 +66,7 @@ class Robot:
         # Robot properties
         self.gear_ratio = 120 / 1  # 1:120
         self.wheel_diameter = 0.065  # Meters
-        # self.wheel_base = 0.1524 # Meters (6")
         self.wheel_base = 0.1397  # Meters (5.5")
-        # self.wheel_base = 0.127 # Meters (5")
         self.tics_per_rev = 20  # Number of encoder tics per 1 wheel revolution
         self.drive_constant = self.tics_per_rev \
             / (2 * np.pi * (self.wheel_diameter / 2))
@@ -128,6 +134,13 @@ class Robot:
         br.write(broutstring)
         fl.write(floutstring)
 
+    def MonitorIMU(self, updated_angle):
+        # Save encoder states to txt file
+        file = open(f'imu_data.txt', 'a')
+        # Save encoder states to txt files
+        outstring = str(updated_angle) + '\n'
+        file.write(outstring)
+
     def Distance(self):
         """Generate pulse signal to measure distance of objects in front of
         Baron Bot
@@ -161,37 +174,39 @@ class Robot:
         print(f'Distance Sensor Reading: {distance}')
         return distance
 
-    def ReadIMU(self):
+    def ReadIMU(self, count):
         """Read IMU data and return the value as a float
+
+        Args:
+            count (int): Number of times IMU reading has been read
 
         Returns:
             float: x-axis orientation value
+              int: Number of times IMU reading has been read
         """
 
-        count = 0
+        count += 1
 
-        while count < 11:
-            if(self.ser.in_waiting > 0):
+        # Read serial stream
+        line = self.ser.readline()
 
-                count += 1
+        # Avoid first n-lines of serial info
+        if count > 10:
 
-                # Read serial stream
-                line = self.ser.readline()
+            # Strip serial stream of extra characters
+            line = line.rstrip().lstrip()
 
-                # Avoid first n-lines of serial info
-                if count > 10:
+            line = str(line)
+            line = line.strip("'")
+            line = line.strip("b'")
 
-                    # Strip serial stream of extra characters
-                    line = line.rstrip().lstrip()
+            # Return float
+            line = float(line)
 
-                    line = str(line)
-                    line = line.strip("'")
-                    line = line.strip("b'")
+        else:
+            line = 0
 
-                    # Return float
-                    line = float(line)
-
-                    return line
+        return line, count
 
     def CloseGripper(self):
         """Fully close gripper
@@ -215,12 +230,13 @@ class Robot:
         """
 
         # Total encoder tics to drive the desired distance
-        encoder_tics = self.drive_constant * distance
-        # print(f'Encoder Tics: {encoder_tics}')
+        encoder_tics = int(self.drive_constant * distance)
 
-        # # Get Initial IMU angle reading
-        # init_angle = self.ReadIMU()
-        # print(f'angle: {init_angle}')
+        # Get Initial IMU angle reading
+        init_angle = self.imu_angle
+
+        if init_angle > 359:
+            init_angle -= 360
 
         # Left wheel
         gpio.output(self.lb_motor_pin, True)
@@ -238,18 +254,26 @@ class Robot:
         buttonBR = int(0)
         buttonFL = int(0)
 
-        i = 0
-        while i <= encoder_tics:
+        print(f'Duty Cycle: {self.motor_dut_cycle}')
+
+        count = 0
+        while True:
+
+            if self.ser.in_waiting > 0:
+                updated_angle, count = self.ReadIMU(count)
+
+            # if 180 < updated_angle < 360:
+            #     updated_angle -= 360
 
             stateBR = gpio.input(self.right_encoder_pin)
             stateFL = gpio.input(self.left_encoder_pin)
 
-            # print(f'counterBR = {counterBR}, counterFL = {counterFL}, \
-            # GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
-
             # Save encoder states to txt files
             if self.monitor_encoders is True:
                 self.MonitorEncoders('Forward', stateBR, stateFL)
+
+            if self.monitor_imu is True:
+                self.MonitorIMU(updated_angle)
 
             if int(stateBR) != int(buttonBR):
                 buttonBR = int(stateBR)
@@ -266,27 +290,41 @@ class Robot:
                 self.lpwm.stop()
 
             # PID tunning
-            if counterBR > counterFL:  # Double speed to match encoder counts
+            imu_margin = 1
+            low_thresh = init_angle - imu_margin
+            high_thresh = init_angle + imu_margin
 
+            if low_thresh < 0:
+                low_thresh += 360
+
+            if high_thresh > 359:
+                high_thresh -= 360
+            # At 0 the low thresh is 359, high is at 1. this checks if the value is 
+            # print(f'Goal: {encoder_tics} R: {counterBR} L: {counterFL} Angle: {updated_angle} Dutycycle: {self.motor_dut_cycle}')
+            print(f'Angle: {updated_angle} Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
+
+            if updated_angle < low_thresh:
+
+                # Double speed to match encoder counts
                 speed_update = min(self.motor_dut_cycle * 2, 100)
                 self.lpwm.ChangeDutyCycle(speed_update)
-                # print(f'Left: {counterFL} Speed: {speed_update} \
-                # Right: {counterBR}')
 
-            if counterFL > counterBR:  # Double speed to match encoder counts
+            if updated_angle > high_thresh:
 
+                # Double speed to match encoder counts
                 speed_update = min(self.motor_dut_cycle * 2, 100)
                 self.rpwm.ChangeDutyCycle(speed_update)
-                # print(f'Left: {counterFL} Right: {counterBR} \
-                # Speed: {speed_update}')
 
-            if counterFL == counterBR:
+            if low_thresh < updated_angle < high_thresh:
 
                 self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
                 self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
 
             # Break when both encoder counts reached the desired total
             if counterBR >= encoder_tics and counterFL >= encoder_tics:
+                self.rpwm.stop()
+                self.lpwm.stop()
+                self.imu_angle = updated_angle
                 break
 
     def Reverse(self, distance):
@@ -297,7 +335,10 @@ class Robot:
         """
 
         # Total encoder tics to drive the desired distance
-        encoder_tics = self.drive_constant * distance
+        encoder_tics = int(self.drive_constant * distance)
+
+        # Get Initial IMU angle reading
+        init_angle = 0
 
         # Left wheel
         gpio.output(self.lb_motor_pin, False)
@@ -309,26 +350,32 @@ class Robot:
         gpio.output(self.rf_motor_pin, False)
         self.rpwm.start(self.motor_dut_cycle)
 
-        time.sleep(distance)
-
         counterBR = np.uint64(0)
         counterFL = np.uint64(0)
 
         buttonBR = int(0)
         buttonFL = int(0)
 
-        i = 0
-        while i <= encoder_tics:
+        print(f'Duty Cycle: {self.motor_dut_cycle}')
+
+        count = 0
+        while True:
+
+            if self.ser.in_waiting > 0:
+                updated_angle, count = self.ReadIMU(count)
+
+            if 300 < updated_angle < 360:
+                updated_angle -= 360
 
             stateBR = gpio.input(self.right_encoder_pin)
             stateFL = gpio.input(self.left_encoder_pin)
 
-            # print(f'counterBR = {counterBR}, counterFL = {counterFL}, \
-            # GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
-
             # Save encoder states to txt files
             if self.monitor_encoders is True:
                 self.MonitorEncoders('Reverse', stateBR, stateFL)
+
+            if self.monitor_imu is True:
+                self.MonitorIMU(updated_angle)
 
             if int(stateBR) != int(buttonBR):
                 buttonBR = int(stateBR)
@@ -345,27 +392,33 @@ class Robot:
                 self.lpwm.stop()
 
             # PID tunning
-            if counterBR > counterFL:  # Double speed to match encoder counts
+            imu_margin = 0.5
+            low_thresh = init_angle - imu_margin
+            high_thresh = init_angle + imu_margin
 
+            print(f'Goal: {encoder_tics} R: {counterBR} L: {counterFL} Angle: {updated_angle} Dutycycle: {self.motor_dut_cycle}')
+
+            if updated_angle < low_thresh:
+
+                # Double speed to match encoder counts
                 speed_update = min(self.motor_dut_cycle * 2, 100)
                 self.rpwm.ChangeDutyCycle(speed_update)
-                # print(f'Left: {counterFL} Speed: {speed_update} \
-                # Right: {counterBR}')
 
-            if counterFL > counterBR:  # Double speed to match encoder counts
+            if updated_angle > high_thresh:
 
+                # Double speed to match encoder counts
                 speed_update = min(self.motor_dut_cycle * 2, 100)
                 self.lpwm.ChangeDutyCycle(speed_update)
-                # print(f'Left: {counterFL} Right: {counterBR} \
-                # Speed: {speed_update}')
 
-            if counterFL == counterBR:
+            if low_thresh < updated_angle < high_thresh:
 
                 self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
                 self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
 
             # Break when both encoder counts reached the desired total
             if counterBR >= encoder_tics and counterFL >= encoder_tics:
+                self.rpwm.stop()
+                self.lpwm.stop()
                 break
 
     def LeftPiv(self, angle):
@@ -380,6 +433,17 @@ class Robot:
         # print(self.drive_constant)
         # print(encoder_tics)
 
+        # Get Initial IMU angle reading
+        init_angle = self.imu_angle
+
+        if init_angle < 0:
+            init_angle += 360
+
+        goal_angle = init_angle - angle
+
+        if goal_angle < 0:
+            goal_angle += 360
+
         # Left wheel
         gpio.output(self.lb_motor_pin, False)
         gpio.output(self.lf_motor_pin, True)
@@ -396,38 +460,67 @@ class Robot:
         buttonBR = int(0)
         buttonFL = int(0)
 
-        i = 0
-        while i <= encoder_tics:
+        count = 0
+        while True:
 
-            stateBR = gpio.input(self.right_encoder_pin)
-            stateFL = gpio.input(self.left_encoder_pin)
+            if self.ser.in_waiting > 0:
+                updated_angle, count = self.ReadIMU(count)
 
-            # print(f'counterBR = {counterBR}, counterFL = {counterFL}, \
-            # GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
+            # if 180 < updated_angle < 360:
+            #     updated_angle = 360 - updated_angle
 
-            # Save encoder states to txt files
-            if self.monitor_encoders is True:
-                self.MonitorEncoders('LeftPiv', stateBR, stateFL)
+            if count > 10:  # Ignore the first 10 IMU readings
 
-            if int(stateBR) != int(buttonBR):
-                buttonBR = int(stateBR)
-                counterBR += 1
+                stateBR = gpio.input(self.right_encoder_pin)
+                stateFL = gpio.input(self.left_encoder_pin)
 
-            if int(stateFL) != int(buttonFL):
-                buttonFL = int(stateFL)
-                counterFL += 1
+                # print(f'counterBR = {counterBR}, counterFL = {counterFL}, \
+                # GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
 
-            if counterBR >= encoder_tics:
-                self.rpwm.stop()
+                # Save encoder states to txt files
+                if self.monitor_encoders is True:
+                    self.MonitorEncoders('LeftPiv', stateBR, stateFL)
 
-            if counterFL >= encoder_tics:
-                self.lpwm.stop()
+                if self.monitor_imu is True:
+                    self.MonitorIMU(updated_angle)
 
-            # Break when both encoder counts reached the desired total
-            if counterFL >= encoder_tics:
-                self.rpwm.stop()
-                self.lpwm.stop()
-                break
+                if int(stateBR) != int(buttonBR):
+                    buttonBR = int(stateBR)
+                    counterBR += 1
+
+                if int(stateFL) != int(buttonFL):
+                    buttonFL = int(stateFL)
+                    counterFL += 1
+
+                # if counterBR >= encoder_tics:
+                #     self.rpwm.stop()
+
+                # if counterFL >= encoder_tics:
+                #     self.lpwm.stop()
+
+                # Break when both encoder counts reached the desired total
+                print(f'Goal: {goal_angle} Angle: {updated_angle} Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
+
+                # PID tunning
+                low_thresh = goal_angle - self.imu_margin
+                high_thresh = goal_angle + self.imu_margin
+
+                # Break when the current angle is within a threshold of the
+                # goal angle
+                if low_thresh < updated_angle < high_thresh:
+
+                    # Left wheel
+                    gpio.output(self.lb_motor_pin, False)
+                    gpio.output(self.lf_motor_pin, False)
+                    self.lpwm.stop()
+
+                    # Right wheel
+                    gpio.output(self.rb_motor_pin, False)
+                    gpio.output(self.rf_motor_pin, False)
+                    self.rpwm.stop()
+
+                    self.imu_angle = updated_angle
+                    break
 
     def RightPiv(self, angle):
         """Pivot robot to the right for 'tf' seconds
@@ -440,6 +533,17 @@ class Robot:
         encoder_tics = self.drive_constant * self.turning_perimeter * fraction
         # print(self.drive_constant)
         # print(encoder_tics)
+
+        # Get Initial IMU angle reading
+        init_angle = self.imu_angle
+
+        if init_angle < 0:
+            init_angle += 360
+
+        goal_angle = init_angle + angle
+
+        if goal_angle > 360:
+            goal_angle -= 360
 
         # Left wheel
         gpio.output(self.lb_motor_pin, True)
@@ -457,38 +561,63 @@ class Robot:
         buttonBR = int(0)
         buttonFL = int(0)
 
-        i = 0
-        while i <= encoder_tics:
+        count = 0
+        while True:
 
-            stateBR = gpio.input(self.right_encoder_pin)
-            stateFL = gpio.input(self.left_encoder_pin)
+            if self.ser.in_waiting > 0:
+                updated_angle, count = self.ReadIMU(count)
 
-            # print(f'counterBR = {counterBR}, counterFL = {counterFL},\
-            # GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
+            if count > 10:  # Ignore the first 10 IMU readings
 
-            # Save encoder states to txt files
-            if self.monitor_encoders is True:
-                self.MonitorEncoders('RightPiv', stateBR, stateFL)
+                stateBR = gpio.input(self.right_encoder_pin)
+                stateFL = gpio.input(self.left_encoder_pin)
 
-            if int(stateBR) != int(buttonBR):
-                buttonBR = int(stateBR)
-                counterBR += 1
+                # print(f'counterBR = {counterBR}, counterFL = {counterFL},\
+                # GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
 
-            if int(stateFL) != int(buttonFL):
-                buttonFL = int(stateFL)
-                counterFL += 1
+                # Save encoder states to txt files
+                if self.monitor_encoders is True:
+                    self.MonitorEncoders('RightPiv', stateBR, stateFL)
 
-            if counterBR >= encoder_tics:
-                self.rpwm.stop()
+                if self.monitor_imu is True:
+                    self.MonitorIMU(updated_angle)
 
-            if counterFL >= encoder_tics:
-                self.lpwm.stop()
+                if int(stateBR) != int(buttonBR):
+                    buttonBR = int(stateBR)
+                    counterBR += 1
 
-            # Break when both encoder counts reached the desired total
-            if counterBR >= encoder_tics:
-                self.rpwm.stop()
-                self.lpwm.stop()
-                break
+                if int(stateFL) != int(buttonFL):
+                    buttonFL = int(stateFL)
+                    counterFL += 1
+
+                # if counterBR >= encoder_tics:
+                #     self.rpwm.stop()
+
+                # if counterFL >= encoder_tics:
+                #     self.lpwm.stop()
+
+                # PID tunning
+                low_thresh = goal_angle - self.imu_margin
+                high_thresh = goal_angle + self.imu_margin
+
+                print(f'Goal: {goal_angle} Angle: {updated_angle} Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
+
+                # Break when the current angle is within a threshold of the
+                # goal angle
+                if low_thresh < updated_angle < high_thresh:
+
+                    # Left wheel
+                    gpio.output(self.lb_motor_pin, False)
+                    gpio.output(self.lf_motor_pin, False)
+                    self.lpwm.stop()
+
+                    # Right wheel
+                    gpio.output(self.rb_motor_pin, False)
+                    gpio.output(self.rf_motor_pin, False)
+                    self.rpwm.stop()
+
+                    self.imu_angle = updated_angle
+                    break
 
     def PID(self, target, present):
         """A function which computes the PID controller output value. 'target'
@@ -530,6 +659,42 @@ class Robot:
         output = max(self.min_val, min(self.max_val, output))
 
         return output
+
+    def ColorRange(self, color='green'):
+
+        if color == 'red':
+            low_red = np.array([0, 34, 181])
+            high_red = np.array([179, 140, 255])
+            return low_red, high_red
+
+        elif color == 'green':
+            low_green = np.array([50, 100, 70])
+            high_green = np.array([90, 255, 255])
+            return low_green, high_green
+
+        elif color == 'yellow':
+            low_yellow = np.array([0, 134, 134])
+            high_yellow = np.array([179, 255, 255])
+            return low_yellow, high_yellow
+
+    def DistFromCenter(self, x_pos):
+
+        midline = 640 / 2
+
+        pix_per_deg = 38.88 / 640
+
+        pos = x_pos - midline
+
+        if pos > 0:
+            angle = pix_per_deg * pos
+            self.RightPiv(angle)
+            direction = 'Right'
+        else:
+            angle = pix_per_deg * abs(pos)
+            self.LeftPiv(angle)
+            direction = 'Left'
+
+        print(f'Angle to Turn {direction}: {angle}')
 
     def KeyInput(self, key, value):
         """Operate robot through user input to drive and open/close gripper
@@ -606,13 +771,126 @@ class Robot:
             time.sleep(1.5)
 
 
+def TrackColor(robot):
+    cap = cv2.VideoCapture(0)
+
+    ret, frame = cap.read()
+    if ret:    # frame captured without any errors
+
+        frame = cv2.flip(frame, 0)
+        frame = cv2.flip(frame, 1)
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        low_thresh, high_thresh = robot.ColorRange()
+        mask = cv2.inRange(hsv, low_thresh, high_thresh)
+        # color_mask = cv2.bitwise_and(frame, frame, mask=mask)
+
+        # Find the contours
+        cnts = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        cnts = imutils.grab_contours(cnts)
+
+        # Draw contours and track center
+        for c in cnts:
+
+            # (x, y), radius = cv2.minEnclosingCircle(c)
+            # center = (int(x), int(y))
+            # radius = int(radius)
+
+            rect = cv2.boundingRect(c)
+            min_box_size = 15
+            if rect[2] < min_box_size or rect[3] < min_box_size:
+                continue
+
+            x, y, w, h = rect
+
+            center = (int(x + w / 2), int(y + h / 2))
+
+            cv2.rectangle(frame, (x, y), (x + w, y + h),
+                          color=(0, 255, 255), thickness=2)
+
+            robot.DistFromCenter(x)
+
+            # cv2.circle(frame, center, radius,
+            #            color=(0, 255, 255), thickness=2)
+            cv2.circle(frame, center, 1, color=(0, 0, 255), thickness=4)
+
+        # The original input frame is shown in the window
+        cv2.imshow('Original', frame)
+        cv2.waitKey(0)
+
+    # while(True):
+
+    #     # reads frames from a camera
+    #     # ret checks return at each frame
+    #     ret, frame = cap.read()
+
+    #     frame = cv2.flip(frame, 0)
+
+    #     if not ret:
+    #         break
+
+    #     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    #     low_thresh, high_thresh = robot.ColorRange()
+    #     mask = cv2.inRange(hsv, low_thresh, high_thresh)
+    #     # color_mask = cv2.bitwise_and(frame, frame, mask=mask)
+
+    #     # Find the contours
+    #     cnts = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    #     cnts = imutils.grab_contours(cnts)
+
+    #     # Draw contours and track center
+    #     for c in cnts:
+
+    #         # (x, y), radius = cv2.minEnclosingCircle(c)
+    #         # center = (int(x), int(y))
+    #         # radius = int(radius)
+
+    #         rect = cv2.boundingRect(c)
+    #         if rect[2] < 50 or rect[3] < 50:
+    #             continue
+
+    #         x, y, w, h = rect
+
+    #         center = (int(x + w / 2), int(y + h / 2))
+
+    #         cv2.rectangle(frame, (x, y), (x + w, y + h),
+    #                       color=(0, 255, 255), thickness=2)
+
+    #         robot.DistFromCenter(x)
+
+    #         # cv2.circle(frame, center, radius,
+    #         #            color=(0, 255, 255), thickness=2)
+    #         cv2.circle(frame, center, 1, color=(0, 0, 255), thickness=4)
+
+    #     # The original input frame is shown in the window
+    #     cv2.imshow('Original', frame)
+    #     # cv2.imshow('Green Mask', mask)
+    #     # compare_frame = np.hstack((frame, hsv,
+    #     #                            cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)))
+    #     # cv2.imshow('hstack: ', compare_frame)
+
+    #     # Wait for 'a' key to stop the program
+    #     if cv2.waitKey(1) & 0xFF == ord('q'):
+    #         break
+
+    # Close the window / Release webcam
+    cap.release()
+
+    # De-allocate any associated memory usage
+    cv2.destroyAllWindows()
+
+
 if __name__ == '__main__':
 
-    robot = Robot(monitor_encoders=False)
-    robot.Teleop()
+    robot = Robot(monitor_encoders=False, monitor_imu=False)
+
+    for i in range(10):
+        TrackColor(robot)
+    # robot.Teleop()
     # robot.Navigate()
+    # count = 0
     # while True:
-    #     init_angle = robot.ReadIMU()
-    #     print(f'angle: {init_angle}')
+    #     # init_angle, count = robot.ReadIMU(count)
+    #     print(f'angle: {robot.imu_angle}')
+
     robot.GameOver()
     gpio.cleanup()
