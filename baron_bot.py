@@ -209,6 +209,16 @@ class Robot:
 
         return line, count
 
+    def ImgDistance(self, width):
+        known_width = 0.05  # Meters
+        box_width = width  # In pixels
+        known_pix_width = 30  # pixels
+        known_dist = 1  # Meter
+        focal_length = (known_pix_width * known_dist) / known_width  # Meters
+
+        distance = (known_width * focal_length) / box_width
+        return distance
+
     def CloseGripper(self):
         """Fully close gripper
         """
@@ -817,6 +827,7 @@ def TrackColor(robot):
                           color=(0, 255, 255), thickness=2)
 
             robot.DistFromCenter(x)
+            distance = robot.ImgDistance(w)
 
             # cv2.circle(frame, center, radius,
             #            color=(0, 255, 255), thickness=2)
