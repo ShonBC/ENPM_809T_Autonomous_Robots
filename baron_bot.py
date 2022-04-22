@@ -6,6 +6,15 @@ import serial
 import cv2
 import imutils
 
+# For Email method
+import os
+from datetime import datetime
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+from tkinter.messagebox import NO
+
 
 class Robot:
 
@@ -209,6 +218,40 @@ class Robot:
 
         return line, count
 
+    def BufferIMU(self):
+        """Buffer the IMU
+        """
+
+        count = 0
+
+        while True:
+
+            if(self.ser.in_waiting > 0):
+
+                count += 1
+
+                # Read serial stream
+                line = self.ser.readline()
+                # print(line)
+
+                # Avoid first n-lines of serial info
+                if count > 10:
+
+                    # Strip serial stream of extra characters
+
+                    line = line.rstrip().lstrip()
+                    # print(line)
+
+                    line = str(line)
+                    line = line.strip("'")
+                    line = line.strip("b'")
+
+                    print(line)
+
+                    # Return float
+                    line = float(line)
+                    break
+
     def ImgDistance(self, width):
         known_width = 0.05  # Width of known bounding box and known_dist Meters
         box_width = width  # In pixels
@@ -243,28 +286,28 @@ class Robot:
         # Total encoder tics to drive the desired distance
         encoder_tics = int(self.drive_constant * distance)
 
-        straight_contition = False
+        # straight_contition = False
 
-        # Get Initial IMU angle reading
-        init_angle = self.imu_angle
+        # # Get Initial IMU angle reading
+        # init_angle = self.imu_angle
 
-        if 360 - self.imu_margin < init_angle or \
-                init_angle < self.imu_margin:
-            straight_contition = True
-            # init_angle -= 360
+        # if 360 - self.imu_margin < init_angle or \
+        #         init_angle < self.imu_margin:
+        #     straight_contition = True
+        #     # init_angle -= 360
 
-        if init_angle > 360 - self.imu_margin:
-            init_angle -= 360
+        # if init_angle > 360 - self.imu_margin:
+        #     init_angle -= 360
 
         # Left wheel
         gpio.output(self.lb_motor_pin, True)
         gpio.output(self.lf_motor_pin, False)
-        self.lpwm.start(self.motor_dut_cycle)
+        self.lpwm.start(0)
 
         # Right wheel
         gpio.output(self.rb_motor_pin, False)
         gpio.output(self.rf_motor_pin, True)
-        self.rpwm.start(self.motor_dut_cycle)
+        self.rpwm.start(0)
 
         counterBR = np.uint64(0)
         counterFL = np.uint64(0)
@@ -277,80 +320,97 @@ class Robot:
         count = 0
         while True:
 
-            if self.ser.in_waiting > 0:
-                updated_angle, count = self.ReadIMU(count)
+            # if self.ser.in_waiting > 0:
+            #     updated_angle, count = self.ReadIMU(count)
+            #     self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
+            #     self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
 
-                if straight_contition and updated_angle > 180:
-                    updated_angle -= 360
+            #     if straight_contition and updated_angle > 180:
+            #         updated_angle -= 360
 
-                stateBR = gpio.input(self.right_encoder_pin)
-                stateFL = gpio.input(self.left_encoder_pin)
+            stateBR = gpio.input(self.right_encoder_pin)
+            stateFL = gpio.input(self.left_encoder_pin)
 
-                # Save encoder states to txt files
-                if self.monitor_encoders is True:
-                    self.MonitorEncoders('Forward', stateBR, stateFL)
+            # Save encoder states to txt files
+            if self.monitor_encoders is True:
+                self.MonitorEncoders('Forward', stateBR, stateFL)
 
-                if self.monitor_imu is True:
-                    self.MonitorIMU(updated_angle)
+            # if self.monitor_imu is True:
+            #     self.MonitorIMU(updated_angle)
 
-                if int(stateBR) != int(buttonBR):
-                    buttonBR = int(stateBR)
-                    counterBR += 1
+            if int(stateBR) != int(buttonBR):
+                buttonBR = int(stateBR)
+                counterBR += 1
 
-                if int(stateFL) != int(buttonFL):
-                    buttonFL = int(stateFL)
-                    counterFL += 1
+            if int(stateFL) != int(buttonFL):
+                buttonFL = int(stateFL)
+                counterFL += 1
 
-                if counterBR >= encoder_tics:
-                    self.rpwm.stop()
+            if counterBR >= encoder_tics:
+                self.rpwm.stop()
 
-                if counterFL >= encoder_tics:
-                    self.lpwm.stop()
+            if counterFL >= encoder_tics:
+                self.lpwm.stop()
 
-                # PID tunning
-                low_thresh = init_angle - self.imu_margin
-                high_thresh = init_angle + self.imu_margin
+            # # PID tunning
+            # low_thresh = init_angle - self.imu_margin
+            # high_thresh = init_angle + self.imu_margin
 
-                if not straight_contition:
-                    if low_thresh < 0:
-                        low_thresh += 360
+            # if not straight_contition:
+            #     if low_thresh < 0:
+            #         low_thresh += 360
 
-                    if high_thresh > 359:
-                        high_thresh -= 360
-                # print(f'Goal: {encoder_tics} R: {counterBR} L: {counterFL}\
-                #  Angle: {updated_angle} Dutycycle: {self.motor_dut_cycle}')
+            #     if high_thresh > 359:
+            #         high_thresh -= 360
+            # # print(f'Goal: {encoder_tics} R: {counterBR} L: {counterFL}\
+            # #  Angle: {updated_angle} Dutycycle: {self.motor_dut_cycle}')
 
-                if self.debug_mode:
-                    print(f'Angle: {updated_angle} Initial: {init_angle}\
-                        Dutycycle: {self.motor_dut_cycle}')
+            # if self.debug_mode:
+            #     print(f'Angle: {updated_angle} Initial: {init_angle}\
+            #         Dutycycle: {self.motor_dut_cycle}')
 
-                if updated_angle < low_thresh:
+            # if updated_angle < low_thresh:
 
-                    # Double speed to match encoder counts
-                    speed_update = min(self.motor_dut_cycle * 2, 100)
-                    self.lpwm.ChangeDutyCycle(speed_update)
+            #     # Double speed to match encoder counts
+            #     speed_update = min(self.motor_dut_cycle * 2, 100)
+            #     self.lpwm.ChangeDutyCycle(speed_update)
 
-                if updated_angle > high_thresh:
+            # if updated_angle > high_thresh:
 
-                    # Double speed to match encoder counts
-                    speed_update = min(self.motor_dut_cycle * 2, 100)
-                    self.rpwm.ChangeDutyCycle(speed_update)
+            #     # Double speed to match encoder counts
+            #     speed_update = min(self.motor_dut_cycle * 2, 100)
+            #     self.rpwm.ChangeDutyCycle(speed_update)
 
-                if low_thresh < updated_angle < high_thresh:
+            # if low_thresh < updated_angle < high_thresh:
 
-                    self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
-                    self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
+            #     self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
+            #     self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
 
-                # Break when both encoder counts reached the desired total
-                if counterBR >= encoder_tics and counterFL >= encoder_tics:
-                    self.rpwm.stop()
-                    self.lpwm.stop()
-                    updated_angle, count = self.ReadIMU(count)
-                    if straight_contition:
-                        self.imu_angle = updated_angle + 360
-                    else:
-                        self.imu_angle = updated_angle
-                    break
+            # PID tunning
+            if counterBR > counterFL:
+                # Double speed to match encoder counts
+                speed_update = min(self.motor_dut_cycle * 2, 100)
+                self.lpwm.ChangeDutyCycle(speed_update)
+
+            if counterFL > counterBR:
+                # Double speed to match encoder counts
+                speed_update = min(self.motor_dut_cycle * 2, 100)
+                self.rpwm.ChangeDutyCycle(speed_update)
+
+            if counterBR == counterFL:
+                self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
+                self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
+
+            # Break when both encoder counts reached the desired total
+            if counterBR >= encoder_tics and counterFL >= encoder_tics:
+                self.rpwm.stop()
+                self.lpwm.stop()
+                # updated_angle, count = self.ReadIMU(count)
+                # if straight_contition:
+                #     self.imu_angle = updated_angle + 360
+                # else:
+                #     self.imu_angle = updated_angle
+                break
 
     def Reverse(self, distance):
         """Move robot in reverse for 'distance' meters
@@ -362,8 +422,8 @@ class Robot:
         # Total encoder tics to drive the desired distance
         encoder_tics = int(self.drive_constant * distance)
 
-        # Get Initial IMU angle reading
-        init_angle = 0
+        # # Get Initial IMU angle reading
+        # init_angle = 0
 
         # Left wheel
         gpio.output(self.lb_motor_pin, False)
@@ -386,11 +446,11 @@ class Robot:
         count = 0
         while True:
 
-            if self.ser.in_waiting > 0:
-                updated_angle, count = self.ReadIMU(count)
+            # if self.ser.in_waiting > 0:
+            #     updated_angle, count = self.ReadIMU(count)
 
-            if 300 < updated_angle < 360:
-                updated_angle -= 360
+            # if 300 < updated_angle < 360:
+            #     updated_angle -= 360
 
             stateBR = gpio.input(self.right_encoder_pin)
             stateFL = gpio.input(self.left_encoder_pin)
@@ -399,8 +459,8 @@ class Robot:
             if self.monitor_encoders is True:
                 self.MonitorEncoders('Reverse', stateBR, stateFL)
 
-            if self.monitor_imu is True:
-                self.MonitorIMU(updated_angle)
+            # if self.monitor_imu is True:
+            #     self.MonitorIMU(updated_angle)
 
             if int(stateBR) != int(buttonBR):
                 buttonBR = int(stateBR)
@@ -417,30 +477,45 @@ class Robot:
                 self.lpwm.stop()
 
             # PID tunning
-            imu_margin = 0.5
-            low_thresh = init_angle - imu_margin
-            high_thresh = init_angle + imu_margin
+            # imu_margin = 0.5
+            # low_thresh = init_angle - imu_margin
+            # high_thresh = init_angle + imu_margin
 
-            if self.debug_mode:
-                print(f'Goal: {encoder_tics} R: {counterBR} L: {counterFL}\
-                    Angle: {updated_angle} Dutycycle: {self.motor_dut_cycle}')
+            # if self.debug_mode:
+            #     print(f'Goal: {encoder_tics} R: {counterBR} L: {counterFL}\
+            #         Angle: {updated_angle} Dutycycle: {self.motor_dut_cycle}')
 
-            if updated_angle < low_thresh:
+            # if updated_angle < low_thresh:
 
-                # Double speed to match encoder counts
-                speed_update = min(self.motor_dut_cycle * 2, 100)
-                self.rpwm.ChangeDutyCycle(speed_update)
+            #     # Double speed to match encoder counts
+            #     speed_update = min(self.motor_dut_cycle * 2, 100)
+            #     self.rpwm.ChangeDutyCycle(speed_update)
 
-            if updated_angle > high_thresh:
+            # if updated_angle > high_thresh:
 
+            #     # Double speed to match encoder counts
+            #     speed_update = min(self.motor_dut_cycle * 2, 100)
+            #     self.lpwm.ChangeDutyCycle(speed_update)
+
+            # if low_thresh < updated_angle < high_thresh:
+
+            #     self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
+            #     self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
+
+            # PID tunning
+            if counterBR > counterFL:
                 # Double speed to match encoder counts
                 speed_update = min(self.motor_dut_cycle * 2, 100)
                 self.lpwm.ChangeDutyCycle(speed_update)
 
-            if low_thresh < updated_angle < high_thresh:
+            if counterFL > counterBR:
+                # Double speed to match encoder counts
+                speed_update = min(self.motor_dut_cycle * 2, 100)
+                self.rpwm.ChangeDutyCycle(speed_update)
 
-                self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
+            if counterBR == counterFL:
                 self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
+                self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
 
             # Break when both encoder counts reached the desired total
             if counterBR >= encoder_tics and counterFL >= encoder_tics:
@@ -474,12 +549,12 @@ class Robot:
         # Left wheel
         gpio.output(self.lb_motor_pin, False)
         gpio.output(self.lf_motor_pin, True)
-        self.lpwm.start(10)
+        self.lpwm.start(0)
 
         # Right wheel
         gpio.output(self.rb_motor_pin, False)
         gpio.output(self.rf_motor_pin, True)
-        self.rpwm.start(10)
+        self.rpwm.start(0)
 
         counterBR = np.uint64(0)
         counterFL = np.uint64(0)
@@ -578,12 +653,12 @@ class Robot:
         # Left wheel
         gpio.output(self.lb_motor_pin, True)
         gpio.output(self.lf_motor_pin, False)
-        self.lpwm.start(10)
+        self.lpwm.start(0)
 
         # Right wheel
         gpio.output(self.rb_motor_pin, True)
         gpio.output(self.rf_motor_pin, False)
-        self.rpwm.start(10)
+        self.rpwm.start(0)
 
         counterBR = np.uint64(0)
         counterFL = np.uint64(0)
@@ -781,6 +856,55 @@ class Robot:
                 cv2.imshow('frame', frame)
                 cv2.waitKey(0)
 
+    def SendEmail(self):
+        """Take a picture using the RaspberryPi camera and send it in an email.
+        """
+
+        # Define time stamp and record an image 
+        pic_time = datetime.now().strftime('%Y%m%d%H%M%S')
+        cmd = f'raspistill -w 1280 -h 720 -vf -hf -o {pic_time}.jpg'
+        os.system(cmd)
+
+        # Email information
+        smtpUser = 'enpm809tshon@gmail.com'
+        smtpPass = 'enpm809t'
+
+        # Destination email information
+        # toAdd = 'scortes3@umd.edu'
+        toAdd = ['scortes3@umd.edu',
+                 'ENPM809TS19@gmail.com',
+                 'skotasai@umd.edu']
+        fromAdd = smtpUser
+        subject = f'Image recorded at {pic_time}'
+        msg = MIMEMultipart()
+        msg['Subject'] = subject
+        msg['From'] = fromAdd
+        # msg['To'] = toAdd
+        msg['To'] = ', '.join(toAdd)
+        msg.preamble = f'Image recorded at {pic_time}'
+
+        # Email text
+        body = MIMEText(f'Image recorded at {pic_time}')
+        msg.attach(body)
+
+        # Attach image
+        fp = open(f'{pic_time}.jpg', 'rb')
+        img = MIMEImage(fp.read())
+        msg.attach(img)
+
+        # Send email
+        s = smtplib.SMTP('smtp.gmail.com', 587)
+
+        s.ehlo()
+        s.starttls()
+        s.ehlo()
+
+        s.login(smtpUser, smtpPass)
+        s.sendmail(fromAdd, toAdd, msg.as_string())
+        s.quit()
+
+        print("Email delivered!")
+
     def KeyInput(self, key, value):
         """Operate robot through user input to drive and open/close gripper
 
@@ -894,6 +1018,9 @@ def TrackColor(robot, pic_num):
 
             robot.DistFromCenter(x)
             distance = robot.ImgDistance(w)
+            print(f'Distance: {distance}')
+            robot.Forward(distance)
+            robot.CloseGripper()
 
             # cv2.circle(frame, center, radius,
             #            color=(0, 255, 255), thickness=2)
@@ -904,61 +1031,6 @@ def TrackColor(robot, pic_num):
         cv2.waitKey(0)
         cv2.imwrite(f"pic_{pic_num}.jpg", frame)  # Save image
 
-    # while(True):
-
-    #     # reads frames from a camera
-    #     # ret checks return at each frame
-    #     ret, frame = cap.read()
-
-    #     frame = cv2.flip(frame, 0)
-
-    #     if not ret:
-    #         break
-
-    #     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    #     low_thresh, high_thresh = robot.ColorRange()
-    #     mask = cv2.inRange(hsv, low_thresh, high_thresh)
-    #     # color_mask = cv2.bitwise_and(frame, frame, mask=mask)
-
-    #     # Find the contours
-    #     cnts = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    #     cnts = imutils.grab_contours(cnts)
-
-    #     # Draw contours and track center
-    #     for c in cnts:
-
-    #         # (x, y), radius = cv2.minEnclosingCircle(c)
-    #         # center = (int(x), int(y))
-    #         # radius = int(radius)
-
-    #         rect = cv2.boundingRect(c)
-    #         if rect[2] < 50 or rect[3] < 50:
-    #             continue
-
-    #         x, y, w, h = rect
-
-    #         center = (int(x + w / 2), int(y + h / 2))
-
-    #         cv2.rectangle(frame, (x, y), (x + w, y + h),
-    #                       color=(0, 255, 255), thickness=2)
-
-    #         robot.DistFromCenter(x)
-
-    #         # cv2.circle(frame, center, radius,
-    #         #            color=(0, 255, 255), thickness=2)
-    #         cv2.circle(frame, center, 1, color=(0, 0, 255), thickness=4)
-
-    #     # The original input frame is shown in the window
-    #     cv2.imshow('Original', frame)
-    #     # cv2.imshow('Green Mask', mask)
-    #     # compare_frame = np.hstack((frame, hsv,
-    #     #                            cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)))
-    #     # cv2.imshow('hstack: ', compare_frame)
-
-    #     # Wait for 'a' key to stop the program
-    #     if cv2.waitKey(1) & 0xFF == ord('q'):
-    #         break
-
     # Close the window / Release webcam
     cap.release()
 
@@ -968,10 +1040,14 @@ def TrackColor(robot, pic_num):
 
 if __name__ == '__main__':
 
-    robot = Robot(monitor_encoders=False, monitor_imu=False, debug_mode=True)
+    robot = Robot(monitor_encoders=False, monitor_imu=False, debug_mode=False)
 
+    robot.BufferIMU()
+    # d = input('distance')
+    # robot.Forward(float(d))
     for i in range(10):
         TrackColor(robot, i)
+        robot.SendEmail()
 
     # robot.Teleop()
 
