@@ -474,12 +474,12 @@ class Robot:
         # Left wheel
         gpio.output(self.lb_motor_pin, False)
         gpio.output(self.lf_motor_pin, True)
-        self.lpwm.start(self.motor_dut_cycle)
+        self.lpwm.start(10)
 
         # Right wheel
         gpio.output(self.rb_motor_pin, False)
         gpio.output(self.rf_motor_pin, True)
-        self.rpwm.start(self.motor_dut_cycle)
+        self.rpwm.start(10)
 
         counterBR = np.uint64(0)
         counterFL = np.uint64(0)
@@ -492,6 +492,8 @@ class Robot:
 
             if self.ser.in_waiting > 0:
                 updated_angle, count = self.ReadIMU(count)
+                self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
+                self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
 
             # if 180 < updated_angle < 360:
             #     updated_angle = 360 - updated_angle
@@ -527,7 +529,7 @@ class Robot:
 
                 if self.debug_mode:
                     print(f'Goal: {goal_angle} Angle: {updated_angle}\
-                        Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
+                    Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
 
                 # PID tunning
                 low_thresh = goal_angle - self.imu_margin
@@ -576,12 +578,12 @@ class Robot:
         # Left wheel
         gpio.output(self.lb_motor_pin, True)
         gpio.output(self.lf_motor_pin, False)
-        self.lpwm.start(self.motor_dut_cycle)
+        self.lpwm.start(10)
 
         # Right wheel
         gpio.output(self.rb_motor_pin, True)
         gpio.output(self.rf_motor_pin, False)
-        self.rpwm.start(self.motor_dut_cycle)
+        self.rpwm.start(10)
 
         counterBR = np.uint64(0)
         counterFL = np.uint64(0)
@@ -594,6 +596,8 @@ class Robot:
 
             if self.ser.in_waiting > 0:
                 updated_angle, count = self.ReadIMU(count)
+                self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
+                self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
 
             if count > 10:  # Ignore the first 10 IMU readings
 
@@ -630,7 +634,7 @@ class Robot:
 
                 if self.debug_mode:
                     print(f'Goal: {goal_angle} Angle: {updated_angle}\
-                        Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
+                    Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
 
                 # Break when the current angle is within a threshold of the
                 # goal angle
@@ -852,7 +856,7 @@ class Robot:
             time.sleep(1.5)
 
 
-def TrackColor(robot):
+def TrackColor(robot, pic_num):
     cap = cv2.VideoCapture(0)
 
     ret, frame = cap.read()
@@ -898,6 +902,7 @@ def TrackColor(robot):
         # The original input frame is shown in the window
         cv2.imshow('Original', frame)
         cv2.waitKey(0)
+        cv2.imwrite(f"pic_{pic_num}.jpg", frame)  # Save image
 
     # while(True):
 
@@ -965,10 +970,13 @@ if __name__ == '__main__':
 
     robot = Robot(monitor_encoders=False, monitor_imu=False, debug_mode=True)
 
-    # for i in range(10):
-    #     TrackColor(robot)
+    for i in range(10):
+        TrackColor(robot, i)
+
     # robot.Teleop()
-    robot.FindBlock('green')
+
+    # robot.FindBlock('green')
+
     # robot.Navigate()
     # count = 0
     # while True:
