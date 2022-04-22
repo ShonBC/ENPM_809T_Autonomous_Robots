@@ -12,13 +12,14 @@ import imaplib
 import time
 from tkinter.messagebox import NO
 
+
 def checkEmail():
 
     mail = imaplib.IMAP4_SSL('imap.gmail.com')
     emailadds = 'enpm809tshon@gmail.com'
     pwd = 'enpm809t'
     mail.login(emailadds, pwd)
-    mail.list() # List of folders or lables in gmail
+    mail.list()  # List of folders or lables in gmail
 
     count = 0
 
@@ -28,15 +29,16 @@ def checkEmail():
             mail.select('inbox')
 
             # Search for an unread email form user's email address
-            result, data = mail.search(None, f'(UNSEEN FROM "scortes3@umd.edu")')
+            result, data = mail.search(None,
+                                       f'(UNSEEN FROM "scortes3@umd.edu")')
             print(result)
             print(len(data))
             print(f'Data: {data}')
 
-            ids = data[0] # Data is a list
-            id_list = ids.split() # ids is a space separated by a string
+            ids = data[0]  # Data is a list
+            id_list = ids.split()  # ids is a space separated by a string
 
-            latest_email_id = id_list[-1] # Get latest
+            latest_email_id = id_list[-1]  # Get latest
             result, data = mail.fetch(latest_email_id, 'RFC822')
 
             if data is None:
@@ -45,7 +47,6 @@ def checkEmail():
             if data is not None:
                 print('Process Initiated')
                 break
-
 
         except IndexError:
             print('err')
@@ -60,7 +61,7 @@ def checkEmail():
 
 def main():
 
-    # Define time stamp and record an image 
+    # Define time stamp and record an image
     pic_time = datetime.now().strftime('%Y%m%d%H%M%S')
     cmd = f'raspistill -w 1280 -h 720 -vf -hf -o {pic_time}.jpg'
     os.system(cmd)
@@ -103,6 +104,7 @@ def main():
 
     print("Email delivered!")
 
-if __name__ =='__main__':
+
+if __name__ == '__main__':
     checkEmail()
     # main()
