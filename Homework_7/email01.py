@@ -57,8 +57,9 @@ def checkEmail():
                 print("Gameover")
                 count = 60
 
+
 def main():
-        
+
     # Define time stamp and record an image 
     pic_time = datetime.now().strftime('%Y%m%d%H%M%S')
     cmd = f'raspistill -w 1280 -h 720 -vf -hf -o {pic_time}.jpg'
