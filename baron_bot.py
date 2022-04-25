@@ -62,6 +62,15 @@ class Robot:
         self.imu_angle = 0
         self.imu_margin = 3
 
+        # Localization
+        self.start_x = 0.4572  # Meters
+        self.start_y = 0.4572  # Meters
+        self.cur_x = self.start_x
+        self.cur_y = self.start_y
+        self.goal_x = 0.6096  # Meters
+        self.goal_y = 2.438  # Meters
+        self.pos_history = [(self.start_x, self.start_y)]
+
         # PID terms
         self.dt = 0.1  # Time step
         self.prev_err = 0
