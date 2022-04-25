@@ -253,6 +253,16 @@ class Robot:
                     break
 
     def ImgDistance(self, width):
+        """Calculate the distance from the camera to a detected object using
+        the width of its bounding box.
+
+        Args:
+            width (int): Width of the detected object's bounding box in pixels
+
+        Returns:
+            float: Distance from the camera to the detected object in meters
+        """
+
         known_width = 0.05  # Width of known bounding box and known_dist Meters
         box_width = width  # In pixels
         known_pix_width = 30  # pixels
