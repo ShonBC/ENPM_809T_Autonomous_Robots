@@ -29,7 +29,7 @@ class Robot:
 
         # Motor pins
         self.motor_frequency = 50
-        self.motor_dut_cycle = 60  # Controls speed
+        self.motor_dut_cycle = 45  # Controls speed
         self.lb_motor_pin = 31
         self.lf_motor_pin = 33
         self.rb_motor_pin = 35
@@ -674,7 +674,7 @@ class Robot:
         gpio.output(self.lf_motor_pin, False)
         self.lpwm.start(0)
 
-        # Right wheel
+        # # Right wheel
         gpio.output(self.rb_motor_pin, True)
         gpio.output(self.rf_motor_pin, False)
         self.rpwm.start(0)
@@ -690,8 +690,10 @@ class Robot:
 
             if self.ser.in_waiting > 0:
                 updated_angle, count = self.ReadIMU(count)
-                self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
-                self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
+                # self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
+                # self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
+                # self.rpwm.ChangeDutyCycle(0)
+                # self.lpwm.ChangeDutyCycle(0)
 
             if count > 10:  # Ignore the first 10 IMU readings
 
@@ -1016,17 +1018,21 @@ def TrackColor(robot, pic_num):
         cnts = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         cnts = imutils.grab_contours(cnts)
 
-        # Draw contours and track center
-        for c in cnts:
+        if len(cnts) > 0:
+            # find the biggest countour (c) by the area
+            c = max(cnts, key=cv2.contourArea)
 
-            # (x, y), radius = cv2.minEnclosingCircle(c)
-            # center = (int(x), int(y))
-            # radius = int(radius)
+            # Draw contours and track center
+            # for c in cnts:
+
+                # (x, y), radius = cv2.minEnclosingCircle(c)
+                # center = (int(x), int(y))
+                # radius = int(radius)
 
             rect = cv2.boundingRect(c)
-            min_box_size = 15
-            if rect[2] < min_box_size or rect[3] < min_box_size:
-                continue
+            # min_box_size = 15
+            # if rect[2] < min_box_size or rect[3] < min_box_size:
+            #     continue
 
             x, y, w, h = rect
 
@@ -1057,16 +1063,20 @@ def TrackColor(robot, pic_num):
     cv2.destroyAllWindows()
 
 
+def GrandChallange():
+    pass
+
+
 if __name__ == '__main__':
 
-    robot = Robot(monitor_encoders=False, monitor_imu=False, debug_mode=False)
+    robot = Robot(monitor_encoders=False, monitor_imu=False, debug_mode=True)
 
     robot.BufferIMU()
-    # d = input('distance')
-    # robot.Forward(float(d))
+    # # d = input('distance')
+    # # robot.Forward(float(d))
     for i in range(10):
         TrackColor(robot, i)
-        robot.SendEmail()
+        # robot.SendEmail()
 
     # robot.Teleop()
 
