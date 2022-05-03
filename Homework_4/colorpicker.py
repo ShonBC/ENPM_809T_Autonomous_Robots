@@ -18,7 +18,6 @@ import imutils
 from operator import xor
 
 
-
 def callback(value):
 	pass
 
