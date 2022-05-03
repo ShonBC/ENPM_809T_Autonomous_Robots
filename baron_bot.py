@@ -1,4 +1,5 @@
 
+from tkinter.tix import Tree
 import RPi.GPIO as gpio
 import time
 import numpy as np
@@ -255,7 +256,7 @@ class Robot:
                     line = line.strip("'")
                     line = line.strip("b'")
 
-                    print(line)
+                    # print(line)
 
                     # Return float
                     line = float(line)
@@ -272,13 +273,14 @@ class Robot:
             float: Distance from the camera to the detected object in meters
         """
 
-        known_width = 0.05  # Width of known bounding box and known_dist Meters
+        known_width = 0.0381  # Width of known bounding box and known_dist Meters
         box_width = width  # In pixels
-        known_pix_width = 30  # pixels
+        known_pix_width = 20  # pixels
         known_dist = 1  # Meter
         focal_length = (known_pix_width * known_dist) / known_width  # Meters
 
         distance = (known_width * focal_length) / box_width
+        distance += 0.0762  # Meters
         return distance
 
     def CloseGripper(self):
@@ -321,12 +323,12 @@ class Robot:
         # Left wheel
         gpio.output(self.lb_motor_pin, True)
         gpio.output(self.lf_motor_pin, False)
-        self.lpwm.start(0)
+        self.lpwm.start(self.motor_dut_cycle)
 
         # Right wheel
         gpio.output(self.rb_motor_pin, False)
         gpio.output(self.rf_motor_pin, True)
-        self.rpwm.start(0)
+        self.rpwm.start(self.motor_dut_cycle)
 
         counterBR = np.uint64(0)
         counterFL = np.uint64(0)
@@ -336,7 +338,7 @@ class Robot:
 
         print(f'Duty Cycle: {self.motor_dut_cycle}')
 
-        count = 0
+        # count = 0
         while True:
 
             # if self.ser.in_waiting > 0:
@@ -419,6 +421,9 @@ class Robot:
             if counterBR == counterFL:
                 self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
                 self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
+
+            if self.debug_mode:
+                print(f'Goal: {encoder_tics} R: {counterBR} L: {counterFL}')
 
             # Break when both encoder counts reached the desired total
             if counterBR >= encoder_tics and counterFL >= encoder_tics:
@@ -565,86 +570,92 @@ class Robot:
         if goal_angle < 0:
             goal_angle += 360
 
-        # Left wheel
-        gpio.output(self.lb_motor_pin, False)
-        gpio.output(self.lf_motor_pin, True)
-        self.lpwm.start(0)
+        if init_angle - self.imu_margin < goal_angle < init_angle + self.imu_margin:
+            pass
+        elif (init_angle <= 2 or init_angle >= 358) and \
+                (goal_angle <= 3 or goal_angle >= 357):
+            pass
+        else:
+            # Left wheel
+            gpio.output(self.lb_motor_pin, False)
+            gpio.output(self.lf_motor_pin, True)
+            self.lpwm.start(0)
 
-        # Right wheel
-        gpio.output(self.rb_motor_pin, False)
-        gpio.output(self.rf_motor_pin, True)
-        self.rpwm.start(0)
+            # Right wheel
+            gpio.output(self.rb_motor_pin, False)
+            gpio.output(self.rf_motor_pin, True)
+            self.rpwm.start(0)
 
-        counterBR = np.uint64(0)
-        counterFL = np.uint64(0)
+            counterBR = np.uint64(0)
+            counterFL = np.uint64(0)
 
-        buttonBR = int(0)
-        buttonFL = int(0)
+            buttonBR = int(0)
+            buttonFL = int(0)
 
-        count = 0
-        while True:
+            count = 0
+            while True:
 
-            if self.ser.in_waiting > 0:
-                updated_angle, count = self.ReadIMU(count)
-                self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
-                self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
+                if self.ser.in_waiting > 0:
+                    updated_angle, count = self.ReadIMU(count)
+                    self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
+                    self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
 
-            # if 180 < updated_angle < 360:
-            #     updated_angle = 360 - updated_angle
+                # if 180 < updated_angle < 360:
+                #     updated_angle = 360 - updated_angle
 
-            if count > 10:  # Ignore the first 10 IMU readings
+                if count > 10:  # Ignore the first 10 IMU readings
 
-                stateBR = gpio.input(self.right_encoder_pin)
-                stateFL = gpio.input(self.left_encoder_pin)
+                    stateBR = gpio.input(self.right_encoder_pin)
+                    stateFL = gpio.input(self.left_encoder_pin)
 
-                # print(f'counterBR = {counterBR}, counterFL = {counterFL}, \
-                # GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
+                    # print(f'counterBR = {counterBR}, counterFL = {counterFL}, \
+                    # GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
 
-                # Save encoder states to txt files
-                if self.monitor_encoders is True:
-                    self.MonitorEncoders('LeftPiv', stateBR, stateFL)
+                    # Save encoder states to txt files
+                    if self.monitor_encoders is True:
+                        self.MonitorEncoders('LeftPiv', stateBR, stateFL)
 
-                if self.monitor_imu is True:
-                    self.MonitorIMU(updated_angle)
+                    if self.monitor_imu is True:
+                        self.MonitorIMU(updated_angle)
 
-                if int(stateBR) != int(buttonBR):
-                    buttonBR = int(stateBR)
-                    counterBR += 1
+                    if int(stateBR) != int(buttonBR):
+                        buttonBR = int(stateBR)
+                        counterBR += 1
 
-                if int(stateFL) != int(buttonFL):
-                    buttonFL = int(stateFL)
-                    counterFL += 1
+                    if int(stateFL) != int(buttonFL):
+                        buttonFL = int(stateFL)
+                        counterFL += 1
 
-                # if counterBR >= encoder_tics:
-                #     self.rpwm.stop()
+                    # if counterBR >= encoder_tics:
+                    #     self.rpwm.stop()
 
-                # if counterFL >= encoder_tics:
-                #     self.lpwm.stop()
+                    # if counterFL >= encoder_tics:
+                    #     self.lpwm.stop()
 
-                if self.debug_mode:
-                    print(f'Goal: {goal_angle} Angle: {updated_angle}\
-                    Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
+                    if self.debug_mode:
+                        print(f'Goal: {goal_angle} Angle: {updated_angle}\
+                        Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
 
-                # PID tunning
-                low_thresh = goal_angle - self.imu_margin
-                high_thresh = goal_angle + self.imu_margin
+                    # PID tunning
+                    low_thresh = goal_angle - self.imu_margin
+                    high_thresh = goal_angle + self.imu_margin
 
-                # Break when the current angle is within a threshold of the
-                # goal angle
-                if low_thresh < updated_angle < high_thresh:
+                    # Break when the current angle is within a threshold of the
+                    # goal angle
+                    if low_thresh < updated_angle < high_thresh:
 
-                    # Left wheel
-                    gpio.output(self.lb_motor_pin, False)
-                    gpio.output(self.lf_motor_pin, False)
-                    self.lpwm.stop()
+                        # Left wheel
+                        gpio.output(self.lb_motor_pin, False)
+                        gpio.output(self.lf_motor_pin, False)
+                        self.lpwm.stop()
 
-                    # Right wheel
-                    gpio.output(self.rb_motor_pin, False)
-                    gpio.output(self.rf_motor_pin, False)
-                    self.rpwm.stop()
+                        # Right wheel
+                        gpio.output(self.rb_motor_pin, False)
+                        gpio.output(self.rf_motor_pin, False)
+                        self.rpwm.stop()
 
-                    self.imu_angle = updated_angle
-                    break
+                        self.imu_angle = updated_angle
+                        break
 
     def RightPiv(self, angle):
         """Pivot robot to the right for 'tf' seconds
@@ -669,85 +680,92 @@ class Robot:
         if goal_angle > 360:
             goal_angle -= 360
 
-        # Left wheel
-        gpio.output(self.lb_motor_pin, True)
-        gpio.output(self.lf_motor_pin, False)
-        self.lpwm.start(0)
+        if init_angle - self.imu_margin < goal_angle < init_angle + self.imu_margin:
+            pass
+        elif (init_angle <= 2 or init_angle >= 358) and \
+                (goal_angle <= 3 or goal_angle >= 357):
+            pass
+        else:
 
-        # # Right wheel
-        gpio.output(self.rb_motor_pin, True)
-        gpio.output(self.rf_motor_pin, False)
-        self.rpwm.start(0)
+            # Left wheel
+            gpio.output(self.lb_motor_pin, True)
+            gpio.output(self.lf_motor_pin, False)
+            self.lpwm.start(0)
 
-        counterBR = np.uint64(0)
-        counterFL = np.uint64(0)
+            # # Right wheel
+            gpio.output(self.rb_motor_pin, True)
+            gpio.output(self.rf_motor_pin, False)
+            self.rpwm.start(0)
 
-        buttonBR = int(0)
-        buttonFL = int(0)
+            counterBR = np.uint64(0)
+            counterFL = np.uint64(0)
 
-        count = 0
-        while True:
+            buttonBR = int(0)
+            buttonFL = int(0)
 
-            if self.ser.in_waiting > 0:
-                updated_angle, count = self.ReadIMU(count)
-                # self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
-                # self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
-                # self.rpwm.ChangeDutyCycle(0)
-                # self.lpwm.ChangeDutyCycle(0)
+            count = 0
+            while True:
 
-            if count > 10:  # Ignore the first 10 IMU readings
+                if self.ser.in_waiting > 0:
+                    updated_angle, count = self.ReadIMU(count)
+                    # self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
+                    # self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
+                    # self.rpwm.ChangeDutyCycle(0)
+                    # self.lpwm.ChangeDutyCycle(0)
 
-                stateBR = gpio.input(self.right_encoder_pin)
-                stateFL = gpio.input(self.left_encoder_pin)
+                if count > 10:  # Ignore the first 10 IMU readings
 
-                # print(f'counterBR = {counterBR}, counterFL = {counterFL},\
-                # GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
+                    stateBR = gpio.input(self.right_encoder_pin)
+                    stateFL = gpio.input(self.left_encoder_pin)
 
-                # Save encoder states to txt files
-                if self.monitor_encoders is True:
-                    self.MonitorEncoders('RightPiv', stateBR, stateFL)
+                    # print(f'counterBR = {counterBR}, counterFL = {counterFL},\
+                    # GPIO BRstate: {stateBR}, GPIO FLstate: {stateFL}')
 
-                if self.monitor_imu is True:
-                    self.MonitorIMU(updated_angle)
+                    # Save encoder states to txt files
+                    if self.monitor_encoders is True:
+                        self.MonitorEncoders('RightPiv', stateBR, stateFL)
 
-                if int(stateBR) != int(buttonBR):
-                    buttonBR = int(stateBR)
-                    counterBR += 1
+                    if self.monitor_imu is True:
+                        self.MonitorIMU(updated_angle)
 
-                if int(stateFL) != int(buttonFL):
-                    buttonFL = int(stateFL)
-                    counterFL += 1
+                    if int(stateBR) != int(buttonBR):
+                        buttonBR = int(stateBR)
+                        counterBR += 1
 
-                # if counterBR >= encoder_tics:
-                #     self.rpwm.stop()
+                    if int(stateFL) != int(buttonFL):
+                        buttonFL = int(stateFL)
+                        counterFL += 1
 
-                # if counterFL >= encoder_tics:
-                #     self.lpwm.stop()
+                    # if counterBR >= encoder_tics:
+                    #     self.rpwm.stop()
 
-                # PID tunning
-                low_thresh = goal_angle - self.imu_margin
-                high_thresh = goal_angle + self.imu_margin
+                    # if counterFL >= encoder_tics:
+                    #     self.lpwm.stop()
 
-                if self.debug_mode:
-                    print(f'Goal: {goal_angle} Angle: {updated_angle}\
-                    Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
+                    # PID tunning
+                    if self.debug_mode:
+                        print(f'Goal: {goal_angle} Angle: {updated_angle}\
+                        Initial: {init_angle} Dutycycle: {self.motor_dut_cycle}')
 
-                # Break when the current angle is within a threshold of the
-                # goal angle
-                if low_thresh < updated_angle < high_thresh:
+                    low_thresh = goal_angle - self.imu_margin
+                    high_thresh = goal_angle + self.imu_margin
 
-                    # Left wheel
-                    gpio.output(self.lb_motor_pin, False)
-                    gpio.output(self.lf_motor_pin, False)
-                    self.lpwm.stop()
+                    # Break when the current angle is within a threshold of the
+                    # goal angle
+                    if low_thresh < updated_angle < high_thresh:
 
-                    # Right wheel
-                    gpio.output(self.rb_motor_pin, False)
-                    gpio.output(self.rf_motor_pin, False)
-                    self.rpwm.stop()
+                        # Left wheel
+                        gpio.output(self.lb_motor_pin, False)
+                        gpio.output(self.lf_motor_pin, False)
+                        self.lpwm.stop()
 
-                    self.imu_angle = updated_angle
-                    break
+                        # Right wheel
+                        gpio.output(self.rb_motor_pin, False)
+                        gpio.output(self.rf_motor_pin, False)
+                        self.rpwm.stop()
+
+                        self.imu_angle = updated_angle
+                        break
 
     def PID(self, target, present):
         """A function which computes the PID controller output value. 'target'
@@ -793,19 +811,19 @@ class Robot:
     def ColorRange(self, color='green'):
 
         if color == 'red':
-            low_red = np.array([0, 34, 181])
-            high_red = np.array([179, 140, 255])
+            low_red = np.array([0, 80, 88])
+            high_red = np.array([42, 255, 255])
             return low_red, high_red
 
         elif color == 'green':
-            low_green = np.array([50, 100, 70])
-            high_green = np.array([90, 255, 255])
+            low_green = np.array([60, 93, 70])
+            high_green = np.array([91, 255, 168])
             return low_green, high_green
 
-        elif color == 'yellow':
-            low_yellow = np.array([0, 134, 134])
-            high_yellow = np.array([179, 255, 255])
-            return low_yellow, high_yellow
+        elif color == 'blue':
+            low_blue = np.array([100, 79, 68])
+            high_blue = np.array([157, 255, 168])
+            return low_blue, high_blue
 
     def DistFromCenter(self, x_pos):
 
@@ -850,32 +868,41 @@ class Robot:
                                     cv2.CHAIN_APPROX_SIMPLE)
             cnts = imutils.grab_contours(cnts)
 
-            # Draw contours and track center
-            for c in cnts:
+            if len(cnts) > 0:
+                # find the biggest countour (c) by the area
+                c = max(cnts, key=cv2.contourArea)
 
                 rect = cv2.boundingRect(c)
-                if rect[2] < 10 or rect[3] < 10:
-                    continue
 
                 x, y, w, h = rect
+                x_center = int(x + w / 2)
+                y_center = int(y + h / 2)
 
-                center = (int(x + w / 2), int(y + h / 2))
+                center = (x_center, y_center)
 
                 cv2.rectangle(frame, (x, y), (x + w, y + h),
                               color=(0, 255, 255), thickness=2)
 
-                self.DistFromCenter(x)
+                # self.DistFromCenter(x_center)
                 distance = self.ImgDistance(w)
 
-                self.Forward(distance)
+                # self.Forward(distance)
+                # self.CloseGripper()
 
                 cv2.circle(frame, center, 1, color=(0, 0, 255), thickness=4)
+
+            else:
+                x_center = 0
+                distance = 0
+                w = 0
 
             if self.debug_mode:
                 print(f'Bounding Box Width: {w}')
                 print(f'Distance: {distance}')
                 cv2.imshow('frame', frame)
                 cv2.waitKey(0)
+
+            return x_center, distance, w
 
     def SendEmail(self):
         """Take a picture using the RaspberryPi camera and send it in an email.
@@ -1012,7 +1039,11 @@ def TrackColor(robot, pic_num):
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         low_thresh, high_thresh = robot.ColorRange()
         mask = cv2.inRange(hsv, low_thresh, high_thresh)
-        # color_mask = cv2.bitwise_and(frame, frame, mask=mask)
+
+        # Perform Closing (morphology) to filter noise
+        kernel = np.ones((15, 15), np.uint8)
+        mask = cv2.dilate(mask, kernel)
+        mask = cv2.erode(mask, kernel)
 
         # Find the contours
         cnts = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -1022,17 +1053,7 @@ def TrackColor(robot, pic_num):
             # find the biggest countour (c) by the area
             c = max(cnts, key=cv2.contourArea)
 
-            # Draw contours and track center
-            # for c in cnts:
-
-                # (x, y), radius = cv2.minEnclosingCircle(c)
-                # center = (int(x), int(y))
-                # radius = int(radius)
-
             rect = cv2.boundingRect(c)
-            # min_box_size = 15
-            # if rect[2] < min_box_size or rect[3] < min_box_size:
-            #     continue
 
             x, y, w, h = rect
 
@@ -1047,8 +1068,6 @@ def TrackColor(robot, pic_num):
             robot.Forward(distance)
             robot.CloseGripper()
 
-            # cv2.circle(frame, center, radius,
-            #            color=(0, 255, 255), thickness=2)
             cv2.circle(frame, center, 1, color=(0, 0, 255), thickness=4)
 
         # The original input frame is shown in the window
@@ -1072,10 +1091,29 @@ if __name__ == '__main__':
     robot = Robot(monitor_encoders=False, monitor_imu=False, debug_mode=True)
 
     robot.BufferIMU()
+
+    while True:
+        x_center, distance, box_width = robot.FindBlock()
+        robot.DistFromCenter(x_center)
+
+        if distance > 0.5:
+            robot.Forward(distance / 2)
+            x_center, distance, box_width = robot.FindBlock()
+            robot.DistFromCenter(x_center)
+        robot.Forward(distance)
+
+        x_center, distance, box_width = robot.FindBlock()
+        if box_width > 300:
+            print('Block gripped!')
+            robot.CloseGripper()
+            break
+
+    # robot.Teleop()
+
     # # d = input('distance')
     # # robot.Forward(float(d))
-    for i in range(10):
-        TrackColor(robot, i)
+    # for i in range(10):
+    #     TrackColor(robot, i)
         # robot.SendEmail()
 
     # robot.Teleop()
