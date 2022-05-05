@@ -16,12 +16,16 @@ from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from tkinter.messagebox import NO
 
+import imaplib
+
 
 class Robot:
 
     def __init__(self, monitor_encoders=False,
                  monitor_imu=False,
-                 debug_mode=False):
+                 debug_mode=False,
+                 start_x=0.4572,
+                 start_y=0.4572):
 
         # Save Encoder data to text files
         self.monitor_encoders = monitor_encoders
@@ -64,8 +68,8 @@ class Robot:
         self.imu_margin = 3
 
         # Localization
-        self.start_x = 0.4572  # Meters
-        self.start_y = 0.4572  # Meters
+        self.start_x = start_x  # Meters
+        self.start_y = start_y  # Meters
         self.cur_x = self.start_x
         self.cur_y = self.start_y
         self.goal_x = 0.6096  # Meters
@@ -953,6 +957,58 @@ class Robot:
 
         print("Email delivered!")
 
+    def checkEmail(self):
+        """Wait for email to be received then return true.
+        Checks every 2 seconds, after 120 seconds return False.
+
+        Returns:
+            Bool: True if an unread email is found in less than 120 seconds
+        """
+
+        mail = imaplib.IMAP4_SSL('imap.gmail.com')
+        emailadds = 'enpm809tshon@gmail.com'
+        pwd = 'enpm809t'
+        mail.login(emailadds, pwd)
+        mail.list()  # List of folders or lables in gmail
+
+        count = 0
+
+        while count < 60:
+            try:
+                # Connect to inbox
+                mail.select('inbox')
+
+                # Search for an unread email form user's email address
+                result, data = mail.search(None,
+                                           f'(UNSEEN FROM "scortes3@umd.edu")')
+                print(result)
+                print(len(data))
+                print(f'Data: {data}')
+
+                ids = data[0]  # Data is a list
+                id_list = ids.split()  # ids is a space separated by a string
+
+                latest_email_id = id_list[-1]  # Get latest
+                result, data = mail.fetch(latest_email_id, 'RFC822')
+
+                if data is None:
+                    print('Waiting...')
+
+                if data is not None:
+                    print('Process Initiated')
+                    return True
+
+            except IndexError:
+                print('err')
+                time.sleep(2)
+                if count < 59:
+                    count = count + 1
+                    continue
+                else:
+                    print("Gameover")
+                    count = 60
+                    return False
+
     def KeyInput(self, key, value):
         """Operate robot through user input to drive and open/close gripper
 
@@ -1027,59 +1083,8 @@ class Robot:
             self.KeyInput(key, val)
             time.sleep(1.5)
 
-
-def TrackColor(robot, pic_num):
-    cap = cv2.VideoCapture(0)
-
-    ret, frame = cap.read()
-    if ret:    # frame captured without any errors
-
-        frame = cv2.flip(frame, 0)
-        frame = cv2.flip(frame, 1)
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        low_thresh, high_thresh = robot.ColorRange()
-        mask = cv2.inRange(hsv, low_thresh, high_thresh)
-
-        # Perform Closing (morphology) to filter noise
-        kernel = np.ones((15, 15), np.uint8)
-        mask = cv2.dilate(mask, kernel)
-        mask = cv2.erode(mask, kernel)
-
-        # Find the contours
-        cnts = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        cnts = imutils.grab_contours(cnts)
-
-        if len(cnts) > 0:
-            # find the biggest countour (c) by the area
-            c = max(cnts, key=cv2.contourArea)
-
-            rect = cv2.boundingRect(c)
-
-            x, y, w, h = rect
-
-            center = (int(x + w / 2), int(y + h / 2))
-
-            cv2.rectangle(frame, (x, y), (x + w, y + h),
-                          color=(0, 255, 255), thickness=2)
-
-            robot.DistFromCenter(x)
-            distance = robot.ImgDistance(w)
-            print(f'Distance: {distance}')
-            robot.Forward(distance)
-            robot.CloseGripper()
-
-            cv2.circle(frame, center, 1, color=(0, 0, 255), thickness=4)
-
-        # The original input frame is shown in the window
-        cv2.imshow('Original', frame)
-        cv2.waitKey(0)
-        cv2.imwrite(f"pic_{pic_num}.jpg", frame)  # Save image
-
-    # Close the window / Release webcam
-    cap.release()
-
-    # De-allocate any associated memory usage
-    cv2.destroyAllWindows()
+    def Localize(self):
+        pass
 
 
 def GrandChallange():
