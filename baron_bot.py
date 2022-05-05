@@ -72,8 +72,8 @@ class Robot:
         self.start_y = start_y  # Meters
         self.cur_x = self.start_x
         self.cur_y = self.start_y
-        self.goal_x = 0.6096  # Meters
-        self.goal_y = 2.438  # Meters
+        self.goal_x = 2.4384  # Meters
+        self.goal_y = 0.6096  # Meters
         self.pos_history = [(self.start_x, self.start_y)]
 
         # PID terms
@@ -1084,10 +1084,27 @@ class Robot:
             time.sleep(1.5)
 
     def Localize(self):
-        pass
+
+        v_x = self.goal_x - self.cur_x
+        v_y = self.goal_y - self.cur_y
+        v_mag = np.sqrt((v_x**2) + (v_y**2))
+
+        x_prev, y_prev = self.pos_history[-2]
+
+        u_x = self.cur_x - x_prev
+        u_y = self.cur_y - y_prev
+
+        u_mag = np.sqrt((u_x**2) + (u_y**2))
+
+        dot = (u_x * v_x) + (u_y * v_y)
+        coeff = dot / (u_mag * v_mag)
+        angle = np.arccos(coeff)
+        angle = np.rad2deg(angle)
+
+        return v_mag, angle
 
 
-def GrandChallange():
+def GrandChallenge():
     pass
 
 
