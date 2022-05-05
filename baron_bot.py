@@ -1097,21 +1097,24 @@ if __name__ == '__main__':
 
     robot.BufferIMU()
 
-    while True:
-        x_center, distance, box_width = robot.FindBlock()
-        robot.DistFromCenter(x_center)
+    start = robot.checkEmail()
 
-        if distance > 0.5:
-            robot.Forward(distance / 2)
+    while True:
+        if start:
             x_center, distance, box_width = robot.FindBlock()
             robot.DistFromCenter(x_center)
-        robot.Forward(distance)
 
-        x_center, distance, box_width = robot.FindBlock()
-        if box_width > 300:
-            print('Block gripped!')
-            robot.CloseGripper()
-            break
+            if distance > 0.5:
+                robot.Forward(distance / 2)
+                x_center, distance, box_width = robot.FindBlock()
+                robot.DistFromCenter(x_center)
+            robot.Forward(distance)
+
+            x_center, distance, box_width = robot.FindBlock()
+            if box_width > 300:
+                print('Block gripped!')
+                robot.CloseGripper()
+                break
 
     # robot.Teleop()
 
