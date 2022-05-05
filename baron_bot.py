@@ -1084,6 +1084,13 @@ class Robot:
             time.sleep(1.5)
 
     def Localize(self):
+        """Calculate the distance to drive and angle to turn to get from the
+        current position to the goal zone.
+
+        Returns:
+            float: Distance to the goal zone
+            float: Angle to turn to face goal zone
+        """
 
         v_x = self.goal_x - self.cur_x
         v_y = self.goal_y - self.cur_y
