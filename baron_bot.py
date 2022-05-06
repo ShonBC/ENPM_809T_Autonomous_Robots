@@ -816,18 +816,32 @@ class Robot:
     def ColorRange(self, color='green'):
 
         if color == 'red':
-            low_red = np.array([0, 80, 88])
-            high_red = np.array([42, 255, 255])
+            # low_red = np.array([0, 80, 88])
+            # high_red = np.array([42, 255, 255])
+
+            # 6:40pm
+            low_red = np.array([127, 160, 31])
+            high_red = np.array([206, 255, 255])
+
             return low_red, high_red
 
         elif color == 'green':
-            low_green = np.array([60, 93, 70])
-            high_green = np.array([91, 255, 168])
+            # low_green = np.array([60, 93, 70])
+            # high_green = np.array([91, 255, 168])
+
+            # 6:40pm
+            low_green = np.array([38, 71, 81])
+            high_green = np.array([84, 197, 208])
             return low_green, high_green
 
         elif color == 'blue':
-            low_blue = np.array([100, 79, 68])
-            high_blue = np.array([157, 255, 168])
+            # low_blue = np.array([100, 79, 68])
+            # high_blue = np.array([157, 255, 168])
+
+            # 6:40pm
+            low_blue = np.array([88, 137, 69])
+            high_blue = np.array([146, 255, 255])
+
             return low_blue, high_blue
 
     def DistFromCenter(self, x_pos):
@@ -1122,6 +1136,11 @@ class Robot:
         angle = np.arccos(coeff)
         angle = np.rad2deg(angle)
 
+        v_mag -= 0.3048 # Subtract 1ft from distance to drive
+
+        print(f'Pos History: {self.pos_history}')
+        print(f'Move to Goal- Turn: {angle} Drive: {v_mag}')
+
         return v_mag, angle
 
     def CollectPos(self, distance):
@@ -1179,8 +1198,12 @@ if __name__ == '__main__':
     color = ['red', 'green', 'blue']
     idx = 0
 
+    robot.RightPiv(45)
+
     while repeat <= 3:
         GrandChallenge(robot, color, idx)
+        robot.OpenGripper()
+        robot.Reverse(0.5)
         robot.LeftPiv(180)
         idx += 1
         if idx == 3:
