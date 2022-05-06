@@ -24,8 +24,8 @@ class Robot:
     def __init__(self, monitor_encoders=False,
                  monitor_imu=False,
                  debug_mode=False,
-                 start_x=0.4572,
-                 start_y=0.4572):
+                 start_x=0.6096,
+                 start_y=0.6096):
 
         # Save Encoder data to text files
         self.monitor_encoders = monitor_encoders
@@ -878,6 +878,10 @@ class Robot:
 
     def FindBlock(self, color='green'):
 
+        x_center = 0
+        distance = 0
+        w = 0
+
         cap = cv2.VideoCapture(0)
         ret, frame = cap.read()
 
@@ -907,29 +911,31 @@ class Robot:
                 rect = cv2.boundingRect(c)
 
                 x, y, w, h = rect
-                x_center = int(x + w / 2)
-                y_center = int(y + h / 2)
 
-                center = (x_center, y_center)
+                if w > 5:
+                    x_center = int(x + w / 2)
+                    y_center = int(y + h / 2)
 
-                cv2.rectangle(frame, (x, y), (x + w, y + h),
-                              color=(0, 255, 255), thickness=2)
+                    center = (x_center, y_center)
 
-                # self.DistFromCenter(x_center)
-                distance = self.ImgDistance(w)
+                    cv2.rectangle(frame, (x, y), (x + w, y + h),
+                                  color=(0, 255, 255), thickness=2)
 
-                # self.Forward(distance)
-                # self.CloseGripper()
+                    # self.DistFromCenter(x_center)
+                    distance = self.ImgDistance(w)
 
-                cv2.circle(frame, center, 1, color=(0, 0, 255), thickness=4)
+                    # self.Forward(distance)
+                    # self.CloseGripper()
 
-            else:
-                # x_center = 0
-                # distance = 0
-                # w = 0
-                print(f'Scanning for {color} block')
-                self.LeftPiv(90)
-                self.FindBlock(color)
+                    cv2.circle(frame, center, 1, color=(0, 0, 255), thickness=4)
+
+                else:
+                    # x_center = 0
+                    # distance = 0
+                    # w = 0
+                    print(f'Scanning for {color} block')
+                    self.LeftPiv(90)
+                    self.FindBlock(color)
 
             if self.debug_mode:
                 print(f'Bounding Box Width: {w}')
@@ -1127,22 +1133,28 @@ class Robot:
         v_y = self.goal_y - self.cur_y
         v_mag = np.sqrt((v_x**2) + (v_y**2))
 
-        x_prev, y_prev = self.pos_history[-2]
+        # x_prev, y_prev = self.pos_history[-2]
 
-        u_x = self.cur_x - x_prev
-        u_y = self.cur_y - y_prev
+        # u_x = self.cur_x - x_prev
+        # u_y = self.cur_y - y_prev
 
-        u_mag = np.sqrt((u_x**2) + (u_y**2))
+        # u_mag = np.sqrt((u_x**2) + (u_y**2))
 
-        dot = (u_x * v_x) + (u_y * v_y)
-        coeff = dot / (u_mag * v_mag)
-        angle = np.arccos(coeff)
+        # dot = (u_x * v_x) + (u_y * v_y)
+        # coeff = dot / (u_mag * v_mag)
+        # angle = np.arccos(coeff)
+        # angle = np.rad2deg(angle)
+
+        angle = np.arccos(v_x / v_mag)
         angle = np.rad2deg(angle)
+
+        angle += self.imu_angle
 
         v_mag -= 0.3048  # Subtract 1ft from distance to drive
 
         print(f'Pos History: {self.pos_history}')
         print(f'Move to Goal- Turn: {angle} Drive: {v_mag}')
+        time.sleep(10)
 
         return v_mag, angle
 
@@ -1159,6 +1171,8 @@ class Robot:
         y_new = y_prev + (distance * np.sin(angle))
 
         self.pos_history.append((x_new, y_new))
+        self.cur_x = x_new
+        self.cur_y = y_new
 
         if self.debug_mode:
             print(f'Pose History (x: {x_new}, y: {y_new})')
@@ -1170,7 +1184,7 @@ def GrandChallenge(robot, color, idx):
         robot.DistFromCenter(x_center)
 
         if distance > 0.5:
-            robot.Forward(distance / 2)
+            robot.Forward(distance / 4)
             continue
             # x_center, distance, box_width = robot.FindBlock(color[idx])
             # robot.DistFromCenter(x_center)
