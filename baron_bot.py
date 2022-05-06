@@ -433,6 +433,7 @@ class Robot:
             if counterBR >= encoder_tics and counterFL >= encoder_tics:
                 self.rpwm.stop()
                 self.lpwm.stop()
+                self.CollectPos(distance)
                 # updated_angle, count = self.ReadIMU(count)
                 # if straight_contition:
                 #     self.imu_angle = updated_angle + 360
@@ -830,6 +831,16 @@ class Robot:
             return low_blue, high_blue
 
     def DistFromCenter(self, x_pos):
+        """Determine angle to turn to align with center of the detected object.
+
+        Args:
+            x_pos (int): pixel x position in the frame corresponding to the
+            center of the detected object
+
+        Returns:
+            str: Direction to turn
+            float: Angle to turn in degrees
+        """
 
         midline = 640 / 2
 
@@ -846,7 +857,10 @@ class Robot:
             self.LeftPiv(angle)
             direction = 'Left'
 
-        print(f'Angle to Turn {direction}: {angle}')
+        if self.debug_mode:
+            print(f'Angle to Turn {direction}: {angle}')
+
+        return direction, angle
 
     def FindBlock(self, color='green'):
 
@@ -1083,7 +1097,7 @@ class Robot:
             self.KeyInput(key, val)
             time.sleep(1.5)
 
-    def Localize(self):
+    def GLocalize(self):
         """Calculate the distance to drive and angle to turn to get from the
         current position to the goal zone.
 
@@ -1110,9 +1124,45 @@ class Robot:
 
         return v_mag, angle
 
+    def CollectPos(self, distance):
+        """Determine current position w.r.t. world frame
 
-def GrandChallenge():
-    pass
+        Args:
+            distance (float): distance traveled forward
+        """
+
+        x_prev, y_prev = self.pos_history[-1]
+        angle = np.deg2rad(self.imu_angle)
+        x_new = x_prev + (distance * np.cos(angle))
+        y_new = y_prev + (distance * np.sin(angle))
+
+        self.pos_history.append((x_new, y_new))
+
+        if self.debug_mode:
+            print(f'Pose History (x: {x_new}, y: {y_new})')
+
+
+def GrandChallenge(robot, color, idx):
+    while True:
+        x_center, distance, box_width = robot.FindBlock(color[idx])
+        robot.DistFromCenter(x_center)
+
+        if distance > 0.5:
+            robot.Forward(distance / 2)
+            x_center, distance, box_width = robot.FindBlock(color[idx])
+            robot.DistFromCenter(x_center)
+        robot.Forward(distance)
+
+        x_center, distance, box_width = robot.FindBlock(color[idx])
+        if box_width > 300:
+            print('Block gripped!')
+            robot.CloseGripper()
+            break
+
+    goal_dist, goal_ang = robot.GLocalize()
+
+    robot.LeftPiv(goal_ang)
+    robot.Forward(goal_dist)
 
 
 if __name__ == '__main__':
@@ -1121,24 +1171,45 @@ if __name__ == '__main__':
 
     robot.BufferIMU()
 
-    start = robot.checkEmail()
+    # start = False
+    # while not start:
+    #     start = robot.checkEmail()
 
-    while True:
-        if start:
-            x_center, distance, box_width = robot.FindBlock()
-            robot.DistFromCenter(x_center)
+    repeat = 0
+    color = ['red', 'green', 'blue']
+    idx = 0
 
-            if distance > 0.5:
-                robot.Forward(distance / 2)
-                x_center, distance, box_width = robot.FindBlock()
-                robot.DistFromCenter(x_center)
-            robot.Forward(distance)
+    while repeat <= 3:
+        GrandChallenge(robot, color, idx)
+        robot.LeftPiv(180)
+        idx += 1
+        if idx == 3:
+            repeat += 1
+            idx = 0
 
-            x_center, distance, box_width = robot.FindBlock()
-            if box_width > 300:
-                print('Block gripped!')
-                robot.CloseGripper()
-                break
+    # while True:
+    #     x_center, distance, box_width = robot.FindBlock(color[idx])
+    #     robot.DistFromCenter(x_center)
+
+    #     if distance > 0.5:
+    #         robot.Forward(distance / 2)
+    #         x_center, distance, box_width = robot.FindBlock(color[idx])
+    #         robot.DistFromCenter(x_center)
+    #     robot.Forward(distance)
+
+    #     x_center, distance, box_width = robot.FindBlock(color[idx])
+    #     if box_width > 300:
+    #         print('Block gripped!')
+    #         robot.CloseGripper()
+    #         break
+
+    # goal_dist, goal_ang = robot.Localize()
+
+    # robot.LeftPiv(goal_ang)
+    # robot.Forward(goal_dist)
+
+
+
 
     # robot.Teleop()
 
