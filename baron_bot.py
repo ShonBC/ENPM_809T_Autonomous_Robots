@@ -924,9 +924,12 @@ class Robot:
                 cv2.circle(frame, center, 1, color=(0, 0, 255), thickness=4)
 
             else:
-                x_center = 0
-                distance = 0
-                w = 0
+                # x_center = 0
+                # distance = 0
+                # w = 0
+                print(f'Scanning for {color} block')
+                self.LeftPiv(90)
+                self.FindBlock(color)
 
             if self.debug_mode:
                 print(f'Bounding Box Width: {w}')
@@ -1136,7 +1139,7 @@ class Robot:
         angle = np.arccos(coeff)
         angle = np.rad2deg(angle)
 
-        v_mag -= 0.3048 # Subtract 1ft from distance to drive
+        v_mag -= 0.3048  # Subtract 1ft from distance to drive
 
         print(f'Pos History: {self.pos_history}')
         print(f'Move to Goal- Turn: {angle} Drive: {v_mag}')
@@ -1168,8 +1171,9 @@ def GrandChallenge(robot, color, idx):
 
         if distance > 0.5:
             robot.Forward(distance / 2)
-            x_center, distance, box_width = robot.FindBlock(color[idx])
-            robot.DistFromCenter(x_center)
+            continue
+            # x_center, distance, box_width = robot.FindBlock(color[idx])
+            # robot.DistFromCenter(x_center)
         robot.Forward(distance)
 
         x_center, distance, box_width = robot.FindBlock(color[idx])
@@ -1190,10 +1194,6 @@ if __name__ == '__main__':
 
     robot.BufferIMU()
 
-    # start = False
-    # while not start:
-    #     start = robot.checkEmail()
-
     repeat = 0
     color = ['red', 'green', 'blue']
     idx = 0
@@ -1209,48 +1209,6 @@ if __name__ == '__main__':
         if idx == 3:
             repeat += 1
             idx = 0
-
-    # while True:
-    #     x_center, distance, box_width = robot.FindBlock(color[idx])
-    #     robot.DistFromCenter(x_center)
-
-    #     if distance > 0.5:
-    #         robot.Forward(distance / 2)
-    #         x_center, distance, box_width = robot.FindBlock(color[idx])
-    #         robot.DistFromCenter(x_center)
-    #     robot.Forward(distance)
-
-    #     x_center, distance, box_width = robot.FindBlock(color[idx])
-    #     if box_width > 300:
-    #         print('Block gripped!')
-    #         robot.CloseGripper()
-    #         break
-
-    # goal_dist, goal_ang = robot.Localize()
-
-    # robot.LeftPiv(goal_ang)
-    # robot.Forward(goal_dist)
-
-
-
-
-    # robot.Teleop()
-
-    # # d = input('distance')
-    # # robot.Forward(float(d))
-    # for i in range(10):
-    #     TrackColor(robot, i)
-        # robot.SendEmail()
-
-    # robot.Teleop()
-
-    # robot.FindBlock('green')
-
-    # robot.Navigate()
-    # count = 0
-    # while True:
-    #     # init_angle, count = robot.ReadIMU(count)
-    #     print(f'angle: {robot.imu_angle}')
 
     robot.GameOver()
     gpio.cleanup()
