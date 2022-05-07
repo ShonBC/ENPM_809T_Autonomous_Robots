@@ -9,8 +9,8 @@ if __name__ == '__main__':
     title = 'Position History'
 
     # Load imu angular data in the 5th column of the data file
-    x = np.loadtxt('xpos_data.txt')
-    y = np.loadtxt('ypos_data.txt')
+    x = np.loadtxt('Pose_data/5_7_1532/xpos_data.txt')
+    y = np.loadtxt('Pose_data/5_7_1532/ypos_data.txt')
 
     # Time delta Data Plotting on same figure
     fig, axs = plt.subplots(1)
