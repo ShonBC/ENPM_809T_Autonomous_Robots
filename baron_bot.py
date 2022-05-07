@@ -352,12 +352,12 @@ class Robot:
         # count = 0
         while True:
 
-            distance = self.Distance()
+            # distance = self.Distance()
 
-            if distance < 10.16:  # cm
-                self.Reverse(0.25)
-                self.OpenGripper()
-                break
+            # if distance < 10.16:  # cm
+            #     self.Reverse(0.25)
+            #     self.OpenGripper()
+            #     break
 
             # if self.ser.in_waiting > 0:
             #     updated_angle, count = self.ReadIMU(count)
