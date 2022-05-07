@@ -25,12 +25,14 @@ class Robot:
                  monitor_imu=False,
                  debug_mode=False,
                  start_x=0.6096,
-                 start_y=0.6096):
+                 start_y=0.6096, monitor_pose=False):
 
         # Save Encoder data to text files
         self.monitor_encoders = monitor_encoders
 
         self.debug_mode = debug_mode
+
+        self.monitor_pose = monitor_pose
 
         # Motor pins
         self.motor_frequency = 50
@@ -65,7 +67,7 @@ class Robot:
         self.ser = serial.Serial('/dev/ttyUSB0', 9600)
         self.monitor_imu = monitor_imu
         self.imu_angle = 0
-        self.imu_margin = 5
+        self.imu_margin = 3
 
         # Localization
         self.start_x = start_x  # Meters
@@ -929,7 +931,7 @@ class Robot:
         return direction, angle
 
     def FindBlock(self, color='green'):
-        print('Finding Block')
+        print(f'Finding Block {color}')
 
         x_center = 0
         distance = 0
@@ -959,8 +961,6 @@ class Robot:
                                     cv2.CHAIN_APPROX_SIMPLE)
             cnts = imutils.grab_contours(cnts)
 
-            print('Found countours')
-
             if len(cnts) > 0:
                 # find the biggest countour (c) by the area
                 c = max(cnts, key=cv2.contourArea)
@@ -970,6 +970,7 @@ class Robot:
                 x, y, w, h = rect
 
                 if w > 5:
+                    print(f'Found {color} block')
                     x_center = int(x + w / 2)
                     y_center = int(y + h / 2)
 
@@ -1001,7 +1002,6 @@ class Robot:
                 self.LeftPiv(45)
                 print('Turned 45')
                 self.FindBlock(color)
-                print('Find Block')
 
             if self.debug_mode:
                 print(f'Bounding Box Width: {w}')
@@ -1220,7 +1220,7 @@ class Robot:
 
         angle += self.imu_angle
 
-        v_mag -= 0.3048  # Subtract 1ft from distance to drive
+        # v_mag -= 0.1  # Subtract from distance to drive
 
         print(f'Pos History: {self.pos_history}')
         print(f'Move to Goal- Turn: {angle} Drive: {v_mag}')
@@ -1244,8 +1244,19 @@ class Robot:
         self.cur_x = x_new
         self.cur_y = y_new
 
-        if self.debug_mode:
+        if self.monitor_pose:
             print(f'Pose History (x: {x_new}, y: {y_new})')
+            # Save Pose data to txt file
+            file = open(f'pos_data.txt', 'a')
+            xfile = open(f'xpos_data.txt', 'a')
+            yfile = open(f'ypos_data.txt', 'a')
+            # Save encoder states to txt files
+            outstring = 'Drive ' + str(distance) + 'pose: ' + str(x_new) + ', ' + str(y_new) + ' orientation: ' + str(np.rad2deg(angle)) + '\n'
+            xoutstring = str(x_new) + '\n'
+            youtstring = str(y_new) + '\n'
+            file.write(outstring)
+            xfile.write(xoutstring)
+            yfile.write(youtstring)
 
 
 def GrandChallenge(robot, color, idx):
@@ -1261,7 +1272,7 @@ def GrandChallenge(robot, color, idx):
         robot.Forward(distance)
 
         x_center, distance, box_width = robot.FindBlock(color[idx])
-        if box_width > 300:
+        if box_width > 275:
             print('Block gripped!')
             robot.CloseGripper()
             break
@@ -1274,7 +1285,7 @@ def GrandChallenge(robot, color, idx):
 
 if __name__ == '__main__':
 
-    robot = Robot(monitor_encoders=False, monitor_imu=False, debug_mode=True)
+    robot = Robot(monitor_encoders=False, monitor_imu=False, debug_mode=False, monitor_pose=True)
 
     robot.BufferIMU()
 
@@ -1284,7 +1295,7 @@ if __name__ == '__main__':
 
     robot.RightPiv(45)
 
-    while repeat <= 3:
+    while repeat < 3:
         GrandChallenge(robot, color, idx)
         robot.OpenGripper()
         robot.Reverse(0.25)
