@@ -64,7 +64,7 @@ class Robot:
         self.ser = serial.Serial('/dev/ttyUSB0', 9600)
         self.monitor_imu = monitor_imu
         self.imu_angle = 0
-        self.imu_margin = 8
+        self.imu_margin = 5
 
         # Localization
         self.start_x = start_x  # Meters
@@ -224,13 +224,14 @@ class Robot:
             line = line.strip("b'")
 
             # Return float
-            try:
-                line = float(line)
-                return line, count
-            except ValueError:
-                line = line.rstrip('\\x00')
-                line = float(line)
-                return line, count
+            line = float(line)
+            # try:
+            #     line = float(line)
+            #     return line, count
+            # except ValueError:
+            #     line = line.rstrip('\\x00')
+            #     line = float(line)
+            #     return line, count
 
         else:
             line = 0
@@ -551,10 +552,14 @@ class Robot:
                 self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
                 self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
 
+            if self.debug_mode:
+                print(f'Goal: {encoder_tics} R: {counterBR} L: {counterFL}')
+
             # Break when both encoder counts reached the desired total
             if counterBR >= encoder_tics and counterFL >= encoder_tics:
                 self.rpwm.stop()
                 self.lpwm.stop()
+                self.CollectPos(distance)
                 break
 
     def LeftPiv(self, angle):
@@ -890,6 +895,7 @@ class Robot:
         w = 0
 
         cap = cv2.VideoCapture(0)
+        print('Cap')
         ret, frame = cap.read()
         print('Captured frame')
 
@@ -951,8 +957,8 @@ class Robot:
                 cv2.destroyAllWindows()
 
                 print(f'Scanning for {color} block')
-                self.LeftPiv(90)
-                print('Turned 90')
+                self.LeftPiv(45)
+                print('Turned 45')
                 self.FindBlock(color)
                 print('Find Block')
 
