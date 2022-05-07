@@ -635,6 +635,9 @@ class Robot:
 
                 if count > 10:  # Ignore the first 10 IMU readings
 
+                    self.rpwm.ChangeDutyCycle(20)
+                    self.lpwm.ChangeDutyCycle(20)
+
                     stateBR = gpio.input(self.right_encoder_pin)
                     stateFL = gpio.input(self.left_encoder_pin)
 
@@ -761,6 +764,9 @@ class Robot:
                     # self.lpwm.ChangeDutyCycle(0)
 
                 if count > 10:  # Ignore the first 10 IMU readings
+
+                    self.rpwm.ChangeDutyCycle(20)
+                    self.lpwm.ChangeDutyCycle(20)
 
                     stateBR = gpio.input(self.right_encoder_pin)
                     stateFL = gpio.input(self.left_encoder_pin)
