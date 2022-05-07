@@ -67,7 +67,7 @@ class Robot:
         self.ser = serial.Serial('/dev/ttyUSB0', 9600)
         self.monitor_imu = monitor_imu
         self.imu_angle = 0
-        self.imu_margin = 3
+        self.imu_margin = 3.5
 
         # Localization
         self.start_x = start_x  # Meters
