@@ -1,5 +1,4 @@
 
-from tkinter.tix import Tree
 import RPi.GPIO as gpio
 import time
 import numpy as np
@@ -65,7 +64,7 @@ class Robot:
         self.ser = serial.Serial('/dev/ttyUSB0', 9600)
         self.monitor_imu = monitor_imu
         self.imu_angle = 0
-        self.imu_margin = 3
+        self.imu_margin = 8
 
         # Localization
         self.start_x = start_x  # Meters
@@ -225,7 +224,13 @@ class Robot:
             line = line.strip("b'")
 
             # Return float
-            line = float(line)
+            try:
+                line = float(line)
+                return line, count
+            except ValueError:
+                line = line.rstrip('\\x00')
+                line = float(line)
+                return line, count
 
         else:
             line = 0
@@ -559,8 +564,8 @@ class Robot:
             angle (int): Angle in degrees for robot to turn left
         """
 
-        fraction = angle / 360
-        encoder_tics = self.drive_constant * self.turning_perimeter * fraction
+        # fraction = angle / 360
+        # encoder_tics = self.drive_constant * self.turning_perimeter * fraction
         # print(self.drive_constant)
         # print(encoder_tics)
 
@@ -669,8 +674,8 @@ class Robot:
             angle (int): Angle in degrees for robot to turn right
         """
 
-        fraction = angle / 360
-        encoder_tics = self.drive_constant * self.turning_perimeter * fraction
+        # fraction = angle / 360
+        # encoder_tics = self.drive_constant * self.turning_perimeter * fraction
         # print(self.drive_constant)
         # print(encoder_tics)
 
@@ -713,6 +718,7 @@ class Robot:
 
                 if self.ser.in_waiting > 0:
                     updated_angle, count = self.ReadIMU(count)
+                    print(updated_angle)
                     # self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
                     # self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
                     # self.rpwm.ChangeDutyCycle(0)
@@ -877,6 +883,7 @@ class Robot:
         return direction, angle
 
     def FindBlock(self, color='green'):
+        print('Finding Block')
 
         x_center = 0
         distance = 0
@@ -884,6 +891,7 @@ class Robot:
 
         cap = cv2.VideoCapture(0)
         ret, frame = cap.read()
+        print('Captured frame')
 
         if ret:
 
@@ -903,6 +911,8 @@ class Robot:
                                     cv2.RETR_TREE,
                                     cv2.CHAIN_APPROX_SIMPLE)
             cnts = imutils.grab_contours(cnts)
+
+            print('Found countours')
 
             if len(cnts) > 0:
                 # find the biggest countour (c) by the area
@@ -928,21 +938,34 @@ class Robot:
                     # self.CloseGripper()
 
                     cv2.circle(frame, center, 1, color=(0, 0, 255), thickness=4)
-
                 else:
-                    # x_center = 0
-                    # distance = 0
-                    # w = 0
-                    print(f'Scanning for {color} block')
-                    self.LeftPiv(90)
-                    self.FindBlock(color)
+                    x_center = 0
+                    distance = 0
+                    w = 0
+
+            if w == 0:
+                # Close the window / Release webcam
+                cap.release()
+
+                # De-allocate any associated memory usage
+                cv2.destroyAllWindows()
+
+                print(f'Scanning for {color} block')
+                self.LeftPiv(90)
+                print('Turned 90')
+                self.FindBlock(color)
+                print('Find Block')
 
             if self.debug_mode:
                 print(f'Bounding Box Width: {w}')
                 print(f'Distance: {distance}')
                 cv2.imshow('frame', frame)
                 cv2.waitKey(0)
+            # Close the window / Release webcam
+            cap.release()
 
+            # De-allocate any associated memory usage
+            cv2.destroyAllWindows()
             return x_center, distance, w
 
     def SendEmail(self):
@@ -1154,7 +1177,7 @@ class Robot:
 
         print(f'Pos History: {self.pos_history}')
         print(f'Move to Goal- Turn: {angle} Drive: {v_mag}')
-        time.sleep(10)
+        # time.sleep(10)
 
         return v_mag, angle
 
@@ -1183,7 +1206,7 @@ def GrandChallenge(robot, color, idx):
         x_center, distance, box_width = robot.FindBlock(color[idx])
         robot.DistFromCenter(x_center)
 
-        if distance > 0.5:
+        if distance > 0.25:
             robot.Forward(distance / 4)
             continue
             # x_center, distance, box_width = robot.FindBlock(color[idx])
@@ -1204,7 +1227,7 @@ def GrandChallenge(robot, color, idx):
 
 if __name__ == '__main__':
 
-    robot = Robot(monitor_encoders=False, monitor_imu=False, debug_mode=True)
+    robot = Robot(monitor_encoders=False, monitor_imu=False, debug_mode=False)
 
     robot.BufferIMU()
 
@@ -1223,6 +1246,9 @@ if __name__ == '__main__':
         if idx == 3:
             repeat += 1
             idx = 0
+
+    # print('tresrfdsf')
+    # robot.Teleop()
 
     robot.GameOver()
     gpio.cleanup()
