@@ -528,7 +528,7 @@ class Robot:
 
             # if self.debug_mode:
             #     print(f'Goal: {encoder_tics} R: {counterBR} L: {counterFL}\
-            #         Angle: {updated_angle} Dutycycle: {self.motor_dut_cycle}')
+            #        Angle: {updated_angle} Dutycycle: {self.motor_dut_cycle}')
 
             # if updated_angle < low_thresh:
 
@@ -985,7 +985,11 @@ class Robot:
                     # self.Forward(distance)
                     # self.CloseGripper()
 
-                    cv2.circle(frame, center, 1, color=(0, 0, 255), thickness=4)
+                    cv2.circle(frame,
+                               center,
+                               1,
+                               color=(0, 0, 255),
+                               thickness=4)
                 else:
                     x_center = 0
                     distance = 0
@@ -1251,7 +1255,7 @@ class Robot:
             xfile = open(f'xpos_data.txt', 'a')
             yfile = open(f'ypos_data.txt', 'a')
             # Save encoder states to txt files
-            outstring = 'Drive ' + str(distance) + 'pose: ' + str(x_new) + ', ' + str(y_new) + ' orientation: ' + str(np.rad2deg(angle)) + '\n'
+            outstring = 'Drive ' + str(distance) + ' pose: ' + str(x_new) + ', ' + str(y_new) + ' orientation: ' + str(np.rad2deg(angle)) + '\n'
             xoutstring = str(x_new) + '\n'
             youtstring = str(y_new) + '\n'
             file.write(outstring)
@@ -1285,7 +1289,10 @@ def GrandChallenge(robot, color, idx):
 
 if __name__ == '__main__':
 
-    robot = Robot(monitor_encoders=False, monitor_imu=False, debug_mode=False, monitor_pose=True)
+    robot = Robot(monitor_encoders=False,
+                  monitor_imu=False,
+                  debug_mode=False,
+                  monitor_pose=True)
 
     robot.BufferIMU()
 
