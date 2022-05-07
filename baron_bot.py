@@ -1,4 +1,5 @@
 
+from turtle import up
 import RPi.GPIO as gpio
 import time
 import numpy as np
@@ -589,6 +590,11 @@ class Robot:
 
         goal_angle = init_angle - angle
 
+        flip = False
+        cross = False
+        if goal_angle > init_angle:
+            cross = True
+
         if goal_angle < 0:
             goal_angle += 360
 
@@ -678,6 +684,17 @@ class Robot:
 
                         self.imu_angle = updated_angle
                         break
+                    # if updated_angle > init_angle:
+                    #     flip = True
+
+                    # if not cross:
+                    #     if updated_angle < goal_angle:
+                    #         self.imu_angle = updated_angle
+                    #         self.RightPiv(goal_angle - updated_angle)
+                    # elif flip:
+                    #     if updated_angle < goal_angle:
+                    #         self.imu_angle = updated_angle
+                    #         self.RightPiv(goal_angle - updated_angle)
 
     def RightPiv(self, angle):
         """Pivot robot to the right for 'tf' seconds
@@ -698,6 +715,11 @@ class Robot:
             init_angle += 360
 
         goal_angle = init_angle + angle
+
+        flip = False
+        cross = False
+        if goal_angle < init_angle:
+            cross = True
 
         if goal_angle > 360:
             goal_angle -= 360
@@ -730,7 +752,7 @@ class Robot:
 
                 if self.ser.in_waiting > 0:
                     updated_angle, count = self.ReadIMU(count)
-                    print(updated_angle)
+                    # print(updated_angle)
                     # self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
                     # self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
                     # self.rpwm.ChangeDutyCycle(0)
@@ -789,6 +811,18 @@ class Robot:
 
                         self.imu_angle = updated_angle
                         break
+
+                    # if updated_angle < init_angle:
+                    #     flip = True
+
+                    # if not cross:
+                    #     if updated_angle > goal_angle:
+                    #         self.imu_angle = updated_angle
+                    #         self.LeftPiv(updated_angle - goal_angle)
+                    # elif flip:
+                    #     if updated_angle > goal_angle:
+                    #         self.imu_angle = updated_angle
+                    #         self.LeftPiv(updated_angle - goal_angle)
 
     def PID(self, target, present):
         """A function which computes the PID controller output value. 'target'
@@ -902,9 +936,9 @@ class Robot:
         w = 0
 
         cap = cv2.VideoCapture(0)
-        print('Cap')
+        # print('Cap')
         ret, frame = cap.read()
-        print('Captured frame')
+        # print('Captured frame')
 
         if ret:
 
@@ -1054,9 +1088,9 @@ class Robot:
                 # Search for an unread email form user's email address
                 result, data = mail.search(None,
                                            f'(UNSEEN FROM "scortes3@umd.edu")')
-                print(result)
-                print(len(data))
-                print(f'Data: {data}')
+                # print(result)
+                # print(len(data))
+                # print(f'Data: {data}')
 
                 ids = data[0]  # Data is a list
                 id_list = ids.split()  # ids is a space separated by a string
@@ -1240,7 +1274,7 @@ def GrandChallenge(robot, color, idx):
 
 if __name__ == '__main__':
 
-    robot = Robot(monitor_encoders=False, monitor_imu=False, debug_mode=False)
+    robot = Robot(monitor_encoders=False, monitor_imu=False, debug_mode=True)
 
     robot.BufferIMU()
 
