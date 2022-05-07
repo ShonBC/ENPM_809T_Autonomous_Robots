@@ -255,7 +255,7 @@ class Robot:
                 # print(line)
 
                 # Avoid first n-lines of serial info
-                if count > 10:
+                if count > 30:
 
                     # Strip serial stream of extra characters
 
@@ -350,6 +350,13 @@ class Robot:
 
         # count = 0
         while True:
+
+            distance = self.Distance()
+
+            if distance < 10.16:  # cm
+                self.Reverse(0.25)
+                self.OpenGripper()
+                break
 
             # if self.ser.in_waiting > 0:
             #     updated_angle, count = self.ReadIMU(count)
@@ -1246,7 +1253,7 @@ if __name__ == '__main__':
     while repeat <= 3:
         GrandChallenge(robot, color, idx)
         robot.OpenGripper()
-        robot.Reverse(0.5)
+        robot.Reverse(0.25)
         robot.LeftPiv(180)
         idx += 1
         if idx == 3:
