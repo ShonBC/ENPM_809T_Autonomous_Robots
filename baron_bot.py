@@ -1009,6 +1009,7 @@ class Robot:
                 cv2.destroyAllWindows()
 
                 print(f'Scanning for {color} block')
+                time.sleep(4)
                 self.LeftPiv(45)
                 print('Turned 45')
                 self.FindBlock(color)
@@ -1274,21 +1275,21 @@ def GrandChallenge(robot, color, idx):
         x_center, distance, box_width = robot.FindBlock(color[idx])
         robot.DistFromCenter(x_center)
 
-        if distance > 0.25:
+        if distance > 0.1524:  # 6 inches
             robot.Forward(distance / 4)
             continue
-            # x_center, distance, box_width = robot.FindBlock(color[idx])
-            # robot.DistFromCenter(x_center)
-        robot.Forward(distance)
+        else:
+            robot.Forward(distance)
 
         x_center, distance, box_width = robot.FindBlock(color[idx])
         if box_width > 275:
             print('Block gripped!')
             robot.CloseGripper()
+            robot.SendEmail()
             break
 
     goal_dist, goal_ang = robot.GLocalize()
-
+    time.sleep(4)
     robot.LeftPiv(goal_ang)
     robot.Forward(goal_dist)
 
@@ -1300,17 +1301,20 @@ if __name__ == '__main__':
                   debug_mode=False,
                   monitor_pose=True)
 
-    robot.BufferIMU()
+    # robot.BufferIMU()
 
     repeat = 0
     color = ['red', 'green', 'blue']
     idx = 0
+
+    time.sleep(4)
 
     robot.RightPiv(45)
 
     while repeat < 3:
         GrandChallenge(robot, color, idx)
         robot.OpenGripper()
+        robot.SendEmail()
         robot.Reverse(0.25)
         robot.LeftPiv(180)
         idx += 1
