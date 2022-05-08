@@ -1,5 +1,4 @@
 
-from turtle import up
 import RPi.GPIO as gpio
 import time
 import numpy as np
@@ -15,7 +14,6 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from tkinter.messagebox import NO
-
 import imaplib
 
 
@@ -38,6 +36,7 @@ class Robot:
         # Motor pins
         self.motor_frequency = 50
         self.motor_dut_cycle = 45  # Controls speed
+        self.turn_dc = 0
         self.lb_motor_pin = 31
         self.lf_motor_pin = 33
         self.rb_motor_pin = 35
@@ -112,6 +111,7 @@ class Robot:
 
         # Control both left wheels
         self.lpwm = gpio.PWM(self.lb_motor_pin, self.motor_frequency)
+        self.lpwm.start(0)
 
         # Right Motor pins
         gpio.setup(self.rb_motor_pin, gpio.OUT)  # IN3
@@ -119,6 +119,7 @@ class Robot:
 
         # Control both right wheels
         self.rpwm = gpio.PWM(self.rf_motor_pin, self.motor_frequency)
+        self.rpwm.start(0)
 
         # Encoder pins
         gpio.setup(self.left_encoder_pin, gpio.IN,
@@ -145,6 +146,9 @@ class Robot:
         gpio.output(self.lf_motor_pin, False)
         gpio.output(self.rb_motor_pin, False)
         gpio.output(self.rf_motor_pin, False)
+
+        self.lpwm.stop()
+        self.rpwm.stop()
 
         # Servo pins
         gpio.output(self.servo_pin, False)
@@ -341,6 +345,18 @@ class Robot:
         self.gpwm.ChangeDutyCycle(self.open_servo_duty_cycle)
         time.sleep(1.5)
 
+    def StopMotors(self):
+
+        # Left wheel
+        gpio.output(self.lb_motor_pin, False)
+        gpio.output(self.lf_motor_pin, False)
+        # self.lpwm.ChangeDutyCycle(0)
+
+        # Right wheel
+        gpio.output(self.rb_motor_pin, False)
+        gpio.output(self.rf_motor_pin, False)
+        # self.rpwm.ChangeDutyCycle(0)
+
     def Forward(self, distance):
         """Move robot forward for 'distance' meters
 
@@ -367,12 +383,12 @@ class Robot:
         # Left wheel
         gpio.output(self.lb_motor_pin, True)
         gpio.output(self.lf_motor_pin, False)
-        self.lpwm.start(self.motor_dut_cycle)
+        self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
 
         # Right wheel
         gpio.output(self.rb_motor_pin, False)
         gpio.output(self.rf_motor_pin, True)
-        self.rpwm.start(self.motor_dut_cycle)
+        self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
 
         counterBR = np.uint64(0)
         counterFL = np.uint64(0)
@@ -419,10 +435,12 @@ class Robot:
                 counterFL += 1
 
             if counterBR >= encoder_tics:
-                self.rpwm.stop()
+                # self.rpwm.stop()
+                self.StopMotors()
 
             if counterFL >= encoder_tics:
-                self.lpwm.stop()
+                # self.lpwm.stop()
+                self.StopMotors()
 
             # # PID tunning
             # low_thresh = init_angle - self.imu_margin
@@ -478,8 +496,9 @@ class Robot:
 
             # Break when both encoder counts reached the desired total
             if counterBR >= encoder_tics and counterFL >= encoder_tics:
-                self.rpwm.stop()
-                self.lpwm.stop()
+                # self.rpwm.stop()
+                # self.lpwm.stop()
+                self.StopMotors()
                 self.CollectPos(distance)
                 # updated_angle, count = self.ReadIMU(count)
                 # if straight_contition:
@@ -504,12 +523,12 @@ class Robot:
         # Left wheel
         gpio.output(self.lb_motor_pin, False)
         gpio.output(self.lf_motor_pin, True)
-        self.lpwm.start(self.motor_dut_cycle)
+        self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
 
         # Right wheel
         gpio.output(self.rb_motor_pin, True)
         gpio.output(self.rf_motor_pin, False)
-        self.rpwm.start(self.motor_dut_cycle)
+        self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
 
         counterBR = np.uint64(0)
         counterFL = np.uint64(0)
@@ -547,10 +566,12 @@ class Robot:
                 counterFL += 1
 
             if counterBR >= encoder_tics:
-                self.rpwm.stop()
+                # self.rpwm.stop()
+                self.StopMotors()
 
             if counterFL >= encoder_tics:
-                self.lpwm.stop()
+                # self.lpwm.stop()
+                self.StopMotors()
 
             # PID tunning
             # imu_margin = 0.5
@@ -598,8 +619,9 @@ class Robot:
 
             # Break when both encoder counts reached the desired total
             if counterBR >= encoder_tics and counterFL >= encoder_tics:
-                self.rpwm.stop()
-                self.lpwm.stop()
+                # self.rpwm.stop()
+                # self.lpwm.stop()
+                self.StopMotors()
                 self.CollectPos(-distance)
                 break
 
@@ -663,8 +685,8 @@ class Robot:
                 gpio.output(self.rf_motor_pin, True)
                 # self.rpwm.start(0)
 
-                # self.rpwm.ChangeDutyCycle(20)
-                # self.lpwm.ChangeDutyCycle(20)
+                self.rpwm.ChangeDutyCycle(self.turn_dc)
+                self.lpwm.ChangeDutyCycle(self.turn_dc)
 
                 stateBR = gpio.input(self.right_encoder_pin)
                 stateFL = gpio.input(self.left_encoder_pin)
@@ -696,15 +718,17 @@ class Robot:
                 # goal angle
                 if low_thresh < updated_angle < high_thresh:
 
-                    # Left wheel
-                    gpio.output(self.lb_motor_pin, False)
-                    gpio.output(self.lf_motor_pin, False)
-                    self.lpwm.stop()
+                    # # Left wheel
+                    # gpio.output(self.lb_motor_pin, False)
+                    # gpio.output(self.lf_motor_pin, False)
+                    # # self.lpwm.stop()
 
-                    # Right wheel
-                    gpio.output(self.rb_motor_pin, False)
-                    gpio.output(self.rf_motor_pin, False)
-                    self.rpwm.stop()
+                    # # Right wheel
+                    # gpio.output(self.rb_motor_pin, False)
+                    # gpio.output(self.rf_motor_pin, False)
+                    # # self.rpwm.stop()
+
+                    self.StopMotors()
 
                     self.imu_angle = updated_angle
                     break
@@ -770,8 +794,8 @@ class Robot:
                 gpio.output(self.rf_motor_pin, False)
                 # self.rpwm.start(0)
 
-                # self.rpwm.ChangeDutyCycle(20)
-                # self.lpwm.ChangeDutyCycle(20)
+                self.rpwm.ChangeDutyCycle(self.turn_dc)
+                self.lpwm.ChangeDutyCycle(self.turn_dc)
 
                 stateBR = gpio.input(self.right_encoder_pin)
                 stateFL = gpio.input(self.left_encoder_pin)
@@ -803,15 +827,17 @@ class Robot:
                 # goal angle
                 if low_thresh < updated_angle < high_thresh:
 
-                    # Left wheel
-                    gpio.output(self.lb_motor_pin, False)
-                    gpio.output(self.lf_motor_pin, False)
-                    self.lpwm.stop()
+                    # # Left wheel
+                    # gpio.output(self.lb_motor_pin, False)
+                    # gpio.output(self.lf_motor_pin, False)
+                    # # self.lpwm.stop()
 
-                    # Right wheel
-                    gpio.output(self.rb_motor_pin, False)
-                    gpio.output(self.rf_motor_pin, False)
-                    self.rpwm.stop()
+                    # # Right wheel
+                    # gpio.output(self.rb_motor_pin, False)
+                    # gpio.output(self.rf_motor_pin, False)
+                    # # self.rpwm.stop()
+
+                    self.StopMotors()
 
                     self.imu_angle = updated_angle
                     break
@@ -1297,7 +1323,8 @@ if __name__ == '__main__':
     robot = Robot(monitor_encoders=False,
                   monitor_imu=False,
                   debug_mode=False,
-                  monitor_pose=True, ser=ser)
+                  monitor_pose=True,
+                  ser=ser)
 
     robot.BufferIMU()
 
@@ -1307,21 +1334,21 @@ if __name__ == '__main__':
 
     # time.sleep(4)
 
-    robot.RightPiv(45)
+    # robot.RightPiv(45)
 
-    while repeat < 3:
-        GrandChallenge(robot, color, idx)
-        robot.OpenGripper()
-        # robot.SendEmail()
-        robot.Reverse(0.25)
-        robot.LeftPiv(180)
-        idx += 1
-        if idx == 3:
-            repeat += 1
-            idx = 0
+    # while repeat < 3:
+    #     GrandChallenge(robot, color, idx)
+    #     robot.OpenGripper()
+    #     # robot.SendEmail()
+    #     robot.Reverse(0.25)
+    #     robot.LeftPiv(180)
+    #     idx += 1
+    #     if idx == 3:
+    #         repeat += 1
+    #         idx = 0
 
     # print('tresrfdsf')
-    # robot.Teleop()
+    robot.Teleop()
 
     robot.GameOver()
     gpio.cleanup()
