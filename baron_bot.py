@@ -635,12 +635,12 @@ class Robot:
             # # Left wheel
             # gpio.output(self.lb_motor_pin, False)
             # gpio.output(self.lf_motor_pin, True)
-            self.lpwm.start(0)
+            # self.lpwm.start(0)
 
             # # Right wheel
             # gpio.output(self.rb_motor_pin, False)
             # gpio.output(self.rf_motor_pin, True)
-            self.rpwm.start(0)
+            # self.rpwm.start(0)
 
             counterBR = np.uint64(0)
             counterFL = np.uint64(0)
@@ -663,8 +663,8 @@ class Robot:
                 gpio.output(self.rf_motor_pin, True)
                 # self.rpwm.start(0)
 
-                self.rpwm.ChangeDutyCycle(20)
-                self.lpwm.ChangeDutyCycle(20)
+                # self.rpwm.ChangeDutyCycle(20)
+                # self.lpwm.ChangeDutyCycle(20)
 
                 stateBR = gpio.input(self.right_encoder_pin)
                 stateFL = gpio.input(self.left_encoder_pin)
@@ -742,12 +742,12 @@ class Robot:
             # # Left wheel
             # gpio.output(self.lb_motor_pin, True)
             # gpio.output(self.lf_motor_pin, False)
-            self.lpwm.start(0)
+            # self.lpwm.start(0)
 
             # # # Right wheel
             # gpio.output(self.rb_motor_pin, True)
             # gpio.output(self.rf_motor_pin, False)
-            self.rpwm.start(0)
+            # self.rpwm.start(0)
 
             counterBR = np.uint64(0)
             counterFL = np.uint64(0)
@@ -770,8 +770,8 @@ class Robot:
                 gpio.output(self.rf_motor_pin, False)
                 # self.rpwm.start(0)
 
-                self.rpwm.ChangeDutyCycle(20)
-                self.lpwm.ChangeDutyCycle(20)
+                # self.rpwm.ChangeDutyCycle(20)
+                # self.lpwm.ChangeDutyCycle(20)
 
                 stateBR = gpio.input(self.right_encoder_pin)
                 stateFL = gpio.input(self.left_encoder_pin)
