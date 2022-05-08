@@ -1258,11 +1258,17 @@ class Robot:
 
 
 def GrandChallenge(robot, color, idx):
+
+    midline = 640 / 2
+
     while True:
         x_center, distance, box_width = robot.FindBlock(color[idx])
-        robot.DistFromCenter(x_center)
 
-        if distance > 0.1524:  # 6 inches
+        delta = midline - x_center
+        if delta > 20:
+            robot.DistFromCenter(x_center)
+
+        if distance > 0.3048:  # 12 inches
             robot.Forward(distance / 4)
             continue
         else:
@@ -1272,7 +1278,7 @@ def GrandChallenge(robot, color, idx):
         if box_width > 275:
             print('Block gripped!')
             robot.CloseGripper()
-            robot.SendEmail()
+            # robot.SendEmail()
             break
 
     goal_dist, goal_ang = robot.GLocalize()
@@ -1306,7 +1312,7 @@ if __name__ == '__main__':
     while repeat < 3:
         GrandChallenge(robot, color, idx)
         robot.OpenGripper()
-        robot.SendEmail()
+        # robot.SendEmail()
         robot.Reverse(0.25)
         robot.LeftPiv(180)
         idx += 1
