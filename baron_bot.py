@@ -69,7 +69,7 @@ class Robot:
         self.ser = ser
         self.monitor_imu = monitor_imu
         self.imu_angle = 0
-        self.imu_margin = 3.5
+        self.imu_margin = 2
 
         # Localization
         self.start_x = start_x  # Meters
