@@ -69,7 +69,7 @@ class Robot:
         self.ser = ser
         self.monitor_imu = monitor_imu
         self.imu_angle = 0
-        self.imu_margin = 2
+        self.imu_margin = 3
 
         # Localization
         self.start_x = start_x  # Meters
@@ -600,7 +600,7 @@ class Robot:
             if counterBR >= encoder_tics and counterFL >= encoder_tics:
                 self.rpwm.stop()
                 self.lpwm.stop()
-                self.CollectPos(distance)
+                self.CollectPos(-distance)
                 break
 
     def LeftPiv(self, angle):
@@ -632,14 +632,14 @@ class Robot:
                 (goal_angle <= 3 or goal_angle >= 357):
             pass
         else:
-            # Left wheel
-            gpio.output(self.lb_motor_pin, False)
-            gpio.output(self.lf_motor_pin, True)
+            # # Left wheel
+            # gpio.output(self.lb_motor_pin, False)
+            # gpio.output(self.lf_motor_pin, True)
             self.lpwm.start(0)
 
-            # Right wheel
-            gpio.output(self.rb_motor_pin, False)
-            gpio.output(self.rf_motor_pin, True)
+            # # Right wheel
+            # gpio.output(self.rb_motor_pin, False)
+            # gpio.output(self.rf_motor_pin, True)
             self.rpwm.start(0)
 
             counterBR = np.uint64(0)
@@ -652,6 +652,16 @@ class Robot:
             while True:
 
                 updated_angle, count = self.ReadIMU(count)
+
+                # Left wheel
+                gpio.output(self.lb_motor_pin, False)
+                gpio.output(self.lf_motor_pin, True)
+                # self.lpwm.start(0)
+
+                # Right wheel
+                gpio.output(self.rb_motor_pin, False)
+                gpio.output(self.rf_motor_pin, True)
+                # self.rpwm.start(0)
 
                 self.rpwm.ChangeDutyCycle(20)
                 self.lpwm.ChangeDutyCycle(20)
@@ -729,14 +739,14 @@ class Robot:
             pass
         else:
 
-            # Left wheel
-            gpio.output(self.lb_motor_pin, True)
-            gpio.output(self.lf_motor_pin, False)
+            # # Left wheel
+            # gpio.output(self.lb_motor_pin, True)
+            # gpio.output(self.lf_motor_pin, False)
             self.lpwm.start(0)
 
-            # # Right wheel
-            gpio.output(self.rb_motor_pin, True)
-            gpio.output(self.rf_motor_pin, False)
+            # # # Right wheel
+            # gpio.output(self.rb_motor_pin, True)
+            # gpio.output(self.rf_motor_pin, False)
             self.rpwm.start(0)
 
             counterBR = np.uint64(0)
@@ -749,6 +759,16 @@ class Robot:
             while True:
 
                 updated_angle, count = self.ReadIMU(count)
+
+                # Left wheel
+                gpio.output(self.lb_motor_pin, True)
+                gpio.output(self.lf_motor_pin, False)
+                # self.lpwm.start(0)
+
+                # # Right wheel
+                gpio.output(self.rb_motor_pin, True)
+                gpio.output(self.rf_motor_pin, False)
+                # self.rpwm.start(0)
 
                 self.rpwm.ChangeDutyCycle(20)
                 self.lpwm.ChangeDutyCycle(20)
@@ -1194,6 +1214,9 @@ class Robot:
         angle = np.rad2deg(angle)
 
         angle += self.imu_angle
+
+        if angle > 359:
+            angle -= 360
 
         # v_mag -= 0.1  # Subtract from distance to drive
 
