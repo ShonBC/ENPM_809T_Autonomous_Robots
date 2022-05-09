@@ -1390,7 +1390,7 @@ if __name__ == '__main__':
             repeat += 1
             idx = 0
 
-            robot.goal_x += 0.15243  # 6 inches
+            robot.goal_x += 0.3048  # 12 inches
             robot.goal_y -= 0.0762  # 3 inches
 
     # robot.Teleop()
