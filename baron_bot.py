@@ -1388,7 +1388,6 @@ if __name__ == '__main__':
         robot.LeftPiv(90)
 
         robot.goal_x += 0.1524  # 6 inches
-        robot.goal_y -= 0.0762  # 3 inches
 
         idx += 1
         if idx == 3:
