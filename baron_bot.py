@@ -79,7 +79,7 @@ class Robot:
         self.cur_x = self.start_x
         self.cur_y = self.start_y
         self.goal_x = 2.7432  # Meters 9ft
-        self.goal_y = 0.3048  # Meters 1 ft
+        self.goal_y = 0.45872  # Meters 1.5 ft
         self.pos_history = [(self.start_x, self.start_y)]
 
         # PID terms
@@ -1326,7 +1326,7 @@ def GrandChallenge(robot, color, idx):
         if box_width > 275:
             print('Block gripped!')
             robot.CloseGripper()
-            # robot.SendEmail()
+            robot.SendEmail()
             break
 
     goal_dist, goal_ang = robot.GLocalize()
@@ -1386,13 +1386,16 @@ if __name__ == '__main__':
         robot.OpenGripper()
         robot.Reverse(0.25)
         robot.LeftPiv(90)
+
+        robot.goal_x += 0.1524  # 6 inches
+
         idx += 1
         if idx == 3:
             repeat += 1
             idx = 0
 
-            robot.goal_x += 0.3048  # 12 inches
-            robot.goal_y -= 0.0762  # 3 inches
+            # robot.goal_x += 0.6096  # 24 inches
+            # robot.goal_y -= 0.0762  # 3 inches
 
     # robot.Teleop()
 

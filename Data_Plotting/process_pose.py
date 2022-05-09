@@ -17,7 +17,7 @@ if __name__ == '__main__':
     fig.suptitle(title)
 
     axs.plot(x, y)
-    axs.set(ylabel='Y Position')
-    axs.set(xlabel='X Position')
+    axs.set(ylabel='Y Position [m]')
+    axs.set(xlabel='X Position [m]')
 
     plt.show()
