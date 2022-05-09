@@ -1260,8 +1260,9 @@ class Robot:
 
         # v_mag -= 0.1  # Subtract from distance to drive
 
-        print(f'Pos History: {self.pos_history}')
-        print(f'Move to Goal- Turn: {angle} Drive: {v_mag}')
+        if self.debug_mode:
+            print(f'Pos History: {self.pos_history}')
+            print(f'Move to Goal- Turn: {angle} Drive: {v_mag}')
         # time.sleep(10)
 
         return v_mag, angle
@@ -1283,7 +1284,7 @@ class Robot:
         self.cur_y = y_new
 
         if self.monitor_pose:
-            print(f'Pose History (x: {x_new}, y: {y_new})')
+            print(f'New Pose (x: {x_new}, y: {y_new})')
             # Save Pose data to txt file
             file = open(f'pos_data.txt', 'a')
             xfile = open(f'xpos_data.txt', 'a')
