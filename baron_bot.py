@@ -1326,7 +1326,7 @@ def GrandChallenge(robot, color, idx):
         if box_width > 275:
             print('Block gripped!')
             robot.CloseGripper()
-            # robot.SendEmail()
+            robot.SendEmail()
             break
 
     goal_dist, goal_ang = robot.GLocalize()
