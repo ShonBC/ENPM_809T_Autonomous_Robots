@@ -1268,6 +1268,7 @@ def GrandChallenge(robot, color, idx):
 
         if abs(delta) > 90:  # Obj center is greater than 90 pixels
             direction, angle = robot.DistFromCenter(x_center)
+            print(f'Angle: {angle}')
             if direction == 'Right':
                 robot.RightPiv(angle)
             else:
