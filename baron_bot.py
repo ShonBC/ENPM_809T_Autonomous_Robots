@@ -1384,7 +1384,7 @@ if __name__ == '__main__':
         GrandChallenge(robot, color, idx)
         robot.OpenGripper()
         robot.Reverse(0.25)
-        robot.LeftPiv(180)
+        robot.LeftPiv(90)
         idx += 1
         if idx == 3:
             repeat += 1
