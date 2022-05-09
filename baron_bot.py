@@ -37,7 +37,7 @@ class Robot:
         # Motor pins
         self.motor_frequency = 50
         self.motor_dut_cycle = 45  # Controls speed
-        self.turn_dc = 35  # Controls turn speed
+        self.turn_dc = 38  # Controls turn speed
         self.lb_motor_pin = 31
         self.lf_motor_pin = 33
         self.rb_motor_pin = 35
