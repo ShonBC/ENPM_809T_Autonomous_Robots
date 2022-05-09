@@ -1386,12 +1386,15 @@ if __name__ == '__main__':
         robot.OpenGripper()
         robot.Reverse(0.25)
         robot.LeftPiv(90)
+
+        robot.goal_x += 0.3048  # 12 inches
+
         idx += 1
         if idx == 3:
             repeat += 1
             idx = 0
 
-            robot.goal_x += 0.6096  # 24 inches
+            # robot.goal_x += 0.6096  # 24 inches
             # robot.goal_y -= 0.0762  # 3 inches
 
     # robot.Teleop()
