@@ -79,7 +79,7 @@ class Robot:
         self.cur_x = self.start_x
         self.cur_y = self.start_y
         self.goal_x = 2.7432  # Meters 9ft
-        self.goal_y = 0.3048  # Meters 1 ft
+        self.goal_y = 0.45872  # Meters 1.5 ft
         self.pos_history = [(self.start_x, self.start_y)]
 
         # PID terms
