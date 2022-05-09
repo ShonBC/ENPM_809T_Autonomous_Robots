@@ -907,11 +907,11 @@ class Robot:
 
         if pos > 0:
             angle = pix_per_deg * pos
-            self.RightPiv(angle)
+            # self.RightPiv(angle)
             direction = 'Right'
         else:
             angle = pix_per_deg * abs(pos)
-            self.LeftPiv(angle)
+            # self.LeftPiv(angle)
             direction = 'Left'
 
         if self.debug_mode:
@@ -1265,9 +1265,13 @@ def GrandChallenge(robot, color, idx):
 
         delta = midline - x_center
         print(f'Delta = {midline} - {x_center} = {delta}')
-        # time.sleep(10)
+
         if abs(delta) > 70:
-            robot.DistFromCenter(x_center)
+            direction, angle = robot.DistFromCenter(x_center)
+            if direction == 'Right':
+                robot.RightPiv(angle)
+            else:
+                robot.LeftPiv(angle)
 
         if distance > 0.2032:  # 8 inches
             robot.Forward(distance / 4)
@@ -1314,7 +1318,6 @@ if __name__ == '__main__':
     while repeat < 3:
         GrandChallenge(robot, color, idx)
         robot.OpenGripper()
-        # robot.SendEmail()
         robot.Reverse(0.25)
         robot.LeftPiv(180)
         idx += 1
@@ -1322,8 +1325,8 @@ if __name__ == '__main__':
             repeat += 1
             idx = 0
 
-    # print('tresrfdsf')
     # robot.Teleop()
 
     robot.GameOver()
     gpio.cleanup()
+    print('Grand Challenge Complete! Congrats on finishing your Robotics Masters Degree!')
