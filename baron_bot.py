@@ -36,8 +36,8 @@ class Robot:
 
         # Motor pins
         self.motor_frequency = 50
-        self.motor_dut_cycle = 10  # Controls speed
-        self.turn_dc = 10  # Controls turn speed
+        self.motor_dut_cycle = 45  # Controls speed
+        self.turn_dc = 35  # Controls turn speed
         self.lb_motor_pin = 31
         self.lf_motor_pin = 33
         self.rb_motor_pin = 35
@@ -58,6 +58,8 @@ class Robot:
         self.echo = 18
 
         # PWM signals
+        self.lpwmrev = 0
+        self.rpwmrev = 0
         self.lpwm = 0
         self.rpwm = 0
         self.gpwm = 0
@@ -348,6 +350,8 @@ class Robot:
     def StopDriving(self):
         self.lpwm.ChangeDutyCycle(0)
         self.rpwm.ChangeDutyCycle(0)
+        self.lpwmrev.ChangeDutyCycle(0)
+        self.rpwmrev.ChangeDutyCycle(0)
 
         gpio.output(self.lb_motor_pin, False)
         gpio.output(self.lf_motor_pin, False)
@@ -520,17 +524,25 @@ class Robot:
         # # Get Initial IMU angle reading
         # init_angle = 0
 
+        # gpio.output(self.lb_motor_pin, True)
+        # gpio.output(self.lf_motor_pin, False)
+        # # self.lpwm.start(self.motor_dut_cycle)
+
+        # # Right wheel
+        # gpio.output(self.rb_motor_pin, False)
+        # gpio.output(self.rf_motor_pin, True)
+
         # Left wheel
-        gpio.output(self.lb_motor_pin, False)
-        gpio.output(self.lf_motor_pin, True)
-        # self.lpwm.start(self.motor_dut_cycle)
-        self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
+        # gpio.output(self.lb_motor_pin, False)
+        # gpio.output(self.lf_motor_pin, True)
+        # self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
+        self.lpwmrev.ChangeDutyCycle(self.motor_dut_cycle)
 
         # Right wheel
-        gpio.output(self.rb_motor_pin, True)
-        gpio.output(self.rf_motor_pin, False)
-        # self.rpwm.start(self.motor_dut_cycle)
-        self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
+        # gpio.output(self.rb_motor_pin, True)
+        # gpio.output(self.rf_motor_pin, False)
+        # self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
+        self.rpwmrev.ChangeDutyCycle(self.motor_dut_cycle)
 
         counterBR = np.uint64(0)
         counterFL = np.uint64(0)
@@ -569,11 +581,11 @@ class Robot:
 
             if counterBR >= encoder_tics:
                 # self.rpwm.stop()
-                self.rpwm.ChangeDutyCycle(0)
+                self.rpwmrev.ChangeDutyCycle(0)
 
             if counterFL >= encoder_tics:
                 # self.lpwm.stop()
-                self.lpwm.ChangeDutyCycle(0)
+                self.lpwmrev.ChangeDutyCycle(0)
 
             # PID tunning
             # imu_margin = 0.5
@@ -605,16 +617,16 @@ class Robot:
             if counterBR > counterFL:
                 # Double speed to match encoder counts
                 speed_update = min(self.motor_dut_cycle * 2, 100)
-                self.lpwm.ChangeDutyCycle(speed_update)
+                self.lpwmrev.ChangeDutyCycle(speed_update)
 
             if counterFL > counterBR:
                 # Double speed to match encoder counts
                 speed_update = min(self.motor_dut_cycle * 2, 100)
-                self.rpwm.ChangeDutyCycle(speed_update)
+                self.rpwmrev.ChangeDutyCycle(speed_update)
 
             if counterBR == counterFL:
-                self.lpwm.ChangeDutyCycle(self.motor_dut_cycle)
-                self.rpwm.ChangeDutyCycle(self.motor_dut_cycle)
+                self.lpwmrev.ChangeDutyCycle(self.motor_dut_cycle)
+                self.rpwmrev.ChangeDutyCycle(self.motor_dut_cycle)
 
             if self.debug_mode:
                 print(f'Goal: {encoder_tics} R: {counterBR} L: {counterFL}')
@@ -680,17 +692,17 @@ class Robot:
                 updated_angle, count = self.ReadIMU(count)
 
                 # Left wheel
-                gpio.output(self.lb_motor_pin, False)
-                gpio.output(self.lf_motor_pin, True)
-                # self.lpwm.start(0)
+                # gpio.output(self.lb_motor_pin, False)
+                # gpio.output(self.lf_motor_pin, True)
+                # # self.lpwm.start(0)
 
-                # Right wheel
-                gpio.output(self.rb_motor_pin, False)
-                gpio.output(self.rf_motor_pin, True)
+                # # Right wheel
+                # gpio.output(self.rb_motor_pin, False)
+                # gpio.output(self.rf_motor_pin, True)
                 # self.rpwm.start(0)
 
                 self.rpwm.ChangeDutyCycle(self.turn_dc)
-                self.lpwm.ChangeDutyCycle(self.turn_dc)
+                self.lpwmrev.ChangeDutyCycle(self.turn_dc)
 
                 stateBR = gpio.input(self.right_encoder_pin)
                 stateFL = gpio.input(self.left_encoder_pin)
@@ -787,17 +799,17 @@ class Robot:
 
                 updated_angle, count = self.ReadIMU(count)
 
-                # Left wheel
-                gpio.output(self.lb_motor_pin, True)
-                gpio.output(self.lf_motor_pin, False)
-                # self.lpwm.start(0)
+                # # Left wheel
+                # gpio.output(self.lb_motor_pin, True)
+                # gpio.output(self.lf_motor_pin, False)
+                # # self.lpwm.start(0)
 
-                # # Right wheel
-                gpio.output(self.rb_motor_pin, True)
-                gpio.output(self.rf_motor_pin, False)
+                # # # Right wheel
+                # gpio.output(self.rb_motor_pin, True)
+                # gpio.output(self.rf_motor_pin, False)
                 # self.rpwm.start(0)
 
-                self.rpwm.ChangeDutyCycle(self.turn_dc)
+                self.rpwmrev.ChangeDutyCycle(self.turn_dc)
                 self.lpwm.ChangeDutyCycle(self.turn_dc)
 
                 stateBR = gpio.input(self.right_encoder_pin)
@@ -1331,7 +1343,7 @@ if __name__ == '__main__':
 
     robot = Robot(monitor_encoders=False,
                   monitor_imu=False,
-                  debug_mode=False,
+                  debug_mode=True,
                   monitor_pose=False,
                   ser=ser)
 
@@ -1344,30 +1356,41 @@ if __name__ == '__main__':
     lpwm.start(0)
     rpwm.start(0)
 
+    lpwmrev = gpio.PWM(robot.lf_motor_pin,
+                       robot.motor_frequency)
+
+    rpwmrev = gpio.PWM(robot.rb_motor_pin,
+                       robot.motor_frequency)
+
+    lpwmrev.start(0)
+    rpwmrev.start(0)
+
     robot.rpwm = rpwm
     robot.lpwm = lpwm
+    robot.rpwmrev = rpwmrev
+    robot.lpwmrev = lpwmrev
 
     robot.BufferIMU()
 
-    # repeat = 0
-    # color = ['red', 'green', 'blue']
-    # idx = 0
+    repeat = 0
+    color = ['red', 'green', 'blue']
+    idx = 0
 
-    # time.sleep(4)
+    time.sleep(4)
 
-    # robot.RightPiv(45)
+    robot.RightPiv(45)
 
-    # while repeat < 3:
-    #     GrandChallenge(robot, color, idx)
-    #     robot.OpenGripper()
-    #     robot.Reverse(0.25)
-    #     robot.LeftPiv(180)
-    #     idx += 1
-    #     if idx == 3:
-    #         repeat += 1
-    #         idx = 0
+    while repeat < 3:
+        GrandChallenge(robot, color, idx)
+        robot.OpenGripper()
+        robot.Reverse(0.25)
+        robot.LeftPiv(180)
+        idx += 1
+        if idx == 3:
+            repeat += 1
+            idx = 0
 
-    robot.Teleop()
+    # robot.Teleop()
 
     robot.GameOver()
     gpio.cleanup()
