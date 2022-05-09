@@ -78,8 +78,8 @@ class Robot:
         self.start_y = start_y  # Meters
         self.cur_x = self.start_x
         self.cur_y = self.start_y
-        self.goal_x = 2.4384  # Meters
-        self.goal_y = 0.6096  # Meters
+        self.goal_x = 2.7432  # Meters 9ft
+        self.goal_y = 0.3048  # Meters 1 ft
         self.pos_history = [(self.start_x, self.start_y)]
 
         # PID terms
@@ -1343,8 +1343,8 @@ if __name__ == '__main__':
 
     robot = Robot(monitor_encoders=False,
                   monitor_imu=False,
-                  debug_mode=True,
-                  monitor_pose=False,
+                  debug_mode=False,
+                  monitor_pose=True,
                   ser=ser)
 
     lpwm = gpio.PWM(robot.lb_motor_pin,
