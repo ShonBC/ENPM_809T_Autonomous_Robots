@@ -1376,7 +1376,7 @@ if __name__ == '__main__':
     color = ['red', 'green', 'blue']
     idx = 0
 
-    time.sleep(4)
+    # time.sleep(4)
 
     robot.RightPiv(45)
 
