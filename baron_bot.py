@@ -1269,7 +1269,7 @@ def GrandChallenge(robot, color, idx):
         if abs(delta) > 70:
             robot.DistFromCenter(x_center)
 
-        if distance > 0.3048:  # 12 inches
+        if distance > 0.2032:  # 8 inches
             robot.Forward(distance / 4)
             continue
         else:
